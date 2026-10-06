@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 212 66% 17%;
+    --card: 0 0% 100%;
+    --card-foreground: 212 66% 17%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 212 66% 17%;
+    --primary: 212 66% 17%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 216 23% 96%;
+    --secondary-foreground: 212 66% 17%;
+    --muted: 216 23% 96%;
+    --muted-foreground: 215 11% 39%;
+    --accent: 37 34% 52%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 4 76% 40%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 216 17% 92%;
+    --input: 216 17% 92%;
+    --ring: 212 66% 17%;
+    --radius: 0.5rem;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    @apply bg-white font-sans text-navy;
+  }
+
+  button {
+    cursor: pointer;
+  }
+}
+
+@layer components {
+  .hsv-container {
+    @apply mx-auto w-full max-w-[1280px] px-4 sm:px-8;
+  }
+
+  .hsv-input {
+    @apply h-12 w-full rounded-card border border-line bg-white px-3.5 text-[14.5px] text-navy outline-none transition-colors placeholder:text-faint focus:border-navy;
+  }
+
+  .hsv-input-error {
+    @apply border-danger focus:border-danger;
+  }
+
+  .hsv-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .hsv-btn-primary {
+    @apply hsv-btn h-12 bg-navy text-white hover:bg-navy-deep;
+  }
+
+  .hsv-btn-outline {
+    @apply hsv-btn h-12 border border-navy text-navy hover:bg-surface;
+  }
+
+  .hsv-btn-gold {
+    @apply hsv-btn h-12 bg-gold text-white hover:bg-gold-dark;
+  }
+
+  .hsv-card {
+    @apply rounded-card border border-line bg-white;
+  }
+
+  .hsv-label {
+    @apply mb-1.5 block text-[13px] font-semibold text-navy;
+  }
+
+  .hsv-error {
+    @apply mt-1.5 text-[12.5px] text-danger;
+  }
+
+  .hsv-page-title {
+    @apply text-[26px] font-bold uppercase tracking-[0.05em] text-navy;
+  }
+}
+
+@layer utilities {
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
