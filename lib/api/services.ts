@@ -38,9 +38,14 @@ import type {
 const app = (path: string) => `/api/services/app/${path}`;
 
 export const authApi = {
+  /** Đăng nhập trang quản trị: server chỉ cấp token cho Nhân viên / Quản trị viên, Khách hàng nhận 400. */
   authenticate: (userNameOrEmailAddress: string, password: string) =>
-    http.post<AuthenticateResult>("/api/TokenAuth/Authenticate", { userNameOrEmailAddress, password }),
+    http.post<AuthenticateResult>("/api/TokenAuth/AuthenticateAdmin", { userNameOrEmailAddress, password }),
   register: (input: RegisterInput) => http.post<{ userId: number; userName: string }>(app("Account/Register"), input),
+  /** Gửi email chứa link đặt lại mật khẩu; luôn thành công dù email có tồn tại hay không. */
+  forgotPassword: (emailAddress: string) => http.post<null>(app("Account/ForgotPassword"), { emailAddress }),
+  /** Đặt mật khẩu mới bằng mã trong link email (?token=...). */
+  resetPassword: (token: string, newPassword: string) => http.post<null>(app("Account/ResetPassword"), { token, newPassword }),
 };
 
 export const profileApi = {
@@ -110,6 +115,8 @@ export const userApi = {
   create: (input: CreateUserInput) => http.post<User>(app("User/Create"), input),
   setRoles: (userId: number, roleNames: RoleName[]) => http.put<User>(app("User/SetRoles"), { userId, roleNames }),
   setActive: (userId: number, isActive: boolean) => http.put<User>(app("User/SetActive"), { userId, isActive }),
+  /** Đặt lại mật khẩu cho tài khoản khác (không dùng cho chính mình). */
+  resetPassword: (userId: number, newPassword: string) => http.put<null>(app("User/ResetPassword"), { userId, newPassword }),
 };
 
 export const statisticApi = {

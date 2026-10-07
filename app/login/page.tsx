@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { ShieldCheck } from "lucide-react";
@@ -94,9 +95,14 @@ function AdminLoginForm() {
               <FieldError message={errors.identifier} />
             </div>
             <div>
-              <label htmlFor="al-pass" className="hsv-label">
-                Mật khẩu
-              </label>
+              <div className="flex items-baseline justify-between gap-3">
+                <label htmlFor="al-pass" className="hsv-label">
+                  Mật khẩu
+                </label>
+                <Link href="/forgot-password" className="text-[13px] font-semibold text-gold">
+                  Quên mật khẩu?
+                </Link>
+              </div>
               <input
                 id="al-pass"
                 type="password"
