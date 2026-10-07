@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { BarChart3, FolderTree, Gem, LayoutGrid, Menu, Package, ShoppingCart, Users, X } from "lucide-react";
+import { ChangePasswordDrawer } from "@/components/hsv/change-password-drawer";
 import { notify } from "@/components/hsv/ui";
 import { useAuth } from "@/contexts/auth-context";
 import { useApi } from "@/hooks/use-api";
@@ -30,6 +31,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const current = ADMIN_NAV.find((n) => (n.href === "/" ? pathname === "/" : pathname.startsWith(n.href)));
   const forbidden = !!current?.adminOnly && !isAdmin;
@@ -97,6 +99,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <a href={STORE_URL} target="_blank" rel="noreferrer" className="text-[12.5px] font-semibold text-ink-2">
             Xem cửa hàng
           </a>
+          <button onClick={() => setChangingPassword(true)} className="text-[12.5px] font-semibold text-ink-2">
+            Đổi mật khẩu
+          </button>
           <button
             onClick={() => {
               logout();
@@ -143,6 +148,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Suspense>
         )}
       </div>
+      {changingPassword && <ChangePasswordDrawer onClose={() => setChangingPassword(false)} />}
     </div>
   );
 }

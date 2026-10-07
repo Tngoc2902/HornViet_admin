@@ -21,7 +21,7 @@ type AuthValue = {
   /** Phiên của Nhân viên / Quản trị viên; trang quản trị không giữ phiên Khách hàng. */
   session: Session | null;
   isAdmin: boolean;
-  /** Đăng nhập; tài khoản Khách hàng → ném ApiError 403 và không lưu phiên. */
+  /** Đăng nhập qua AuthenticateAdmin; tài khoản Khách hàng bị server từ chối (400) và không lưu phiên. */
   login: (identifier: string, password: string) => Promise<Session>;
   logout: () => void;
 };
@@ -75,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     async (identifier: string, password: string) => {
       const r = await authApi.authenticate(identifier.trim(), password);
+      // Server đã chặn tài khoản Khách hàng; vẫn kiểm tra lại để không bao giờ lưu phiên không phải quản trị.
       if (!isStaffRoles(r.roles ?? [])) throw new ApiError(403, NOT_STAFF_MESSAGE);
       tokenStore.set(r.accessToken);
       const s: Session = {

@@ -23,14 +23,18 @@ Backend phải đang chạy và có `http://localhost:3001` trong `App:CorsOrigi
 
 | Đường dẫn | Màn hình | Quyền |
 | --- | --- | --- |
-| `/login` | Đăng nhập (chỉ nhận Nhân viên / Quản trị viên) | Công khai |
+| `/login` | Đăng nhập qua `POST /api/TokenAuth/AuthenticateAdmin` (server chỉ cấp token cho Nhân viên / Quản trị viên) | Công khai |
+| `/forgot-password` | Quên mật khẩu: nhập email, backend gửi link đặt lại (hiệu lực 30 phút, dùng một lần) | Công khai |
+| `/reset-password?token=` | Đặt mật khẩu mới từ link trong email | Công khai |
 | `/` | Tổng quan | Nhân viên, Quản trị viên |
 | `/categories` | Danh mục | Nhân viên, Quản trị viên |
 | `/materials` | Nguyên liệu & nguồn gốc | Nhân viên, Quản trị viên |
 | `/products` | Sản phẩm & biến thể | Nhân viên, Quản trị viên |
 | `/orders` | Đơn hàng | Nhân viên, Quản trị viên |
-| `/users` | Người dùng | Quản trị viên |
+| `/users` | Người dùng: tạo tài khoản, đổi vai trò, khóa / mở khóa, đặt lại mật khẩu | Quản trị viên |
 | `/statistics` | Thống kê | Quản trị viên |
+
+Nút **Đổi mật khẩu** ở cuối thanh bên (mọi tài khoản quản trị): đổi xong mọi phiên của tài khoản bị đăng xuất, kể cả phiên hiện tại.
 
 ## Cấu trúc
 
@@ -44,3 +48,6 @@ lib/hsv              Định dạng tiền/ngày, trạng thái đơn, kiểm tr
 ```
 
 `lib/api` và `lib/hsv` được sao từ repo cửa hàng; khi backend đổi API cần cập nhật ở cả hai repo.
+Riêng `lib/api/services.ts` của trang quản trị khác bản cửa hàng ở hai chỗ: `authApi.authenticate` gọi
+`/api/TokenAuth/AuthenticateAdmin` và `userApi.resetPassword` (`PUT /api/services/app/User/ResetPassword`).
+`components/hsv/password-reset-forms.tsx` (form Quên / Đặt lại mật khẩu) giống hệt bản bên repo cửa hàng.

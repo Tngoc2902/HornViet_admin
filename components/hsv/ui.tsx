@@ -145,15 +145,16 @@ export function FieldError({ message }: { message?: string }) {
   return <p className="hsv-error">{message}</p>;
 }
 
-export function FormAlert({ message, tone = "danger" }: { message?: string | null; tone?: "danger" | "warn" }) {
+const ALERT_TONES = {
+  danger: "border-danger-line bg-danger-soft text-danger",
+  warn: "border-warn-line bg-warn-soft text-warn",
+  ok: "border-ok-line bg-ok-soft text-ok",
+};
+
+export function FormAlert({ message, tone = "danger" }: { message?: string | null; tone?: keyof typeof ALERT_TONES }) {
   if (!message) return null;
   return (
-    <p
-      className={cn(
-        "whitespace-pre-line rounded-card border px-3.5 py-2.5 text-[13.5px] leading-relaxed",
-        tone === "danger" ? "border-danger-line bg-danger-soft text-danger" : "border-warn-line bg-warn-soft text-warn"
-      )}
-    >
+    <p className={cn("whitespace-pre-line rounded-card border px-3.5 py-2.5 text-[13.5px] leading-relaxed", ALERT_TONES[tone])}>
       {message}
     </p>
   );

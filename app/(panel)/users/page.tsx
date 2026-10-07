@@ -13,7 +13,7 @@ import { isStrongPassword, isValidEmail, isValidPhone, normalizePhone, type Fiel
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 12;
-const COLS = "grid-cols-[minmax(0,1.6fr)_120px_100px_minmax(0,2.1fr)_100px_90px]";
+const COLS = "grid-cols-[minmax(0,1.6fr)_120px_100px_minmax(0,2.1fr)_100px_180px]";
 const ROLES: RoleName[] = ["Customer", "Staff", "Admin"];
 
 type CreateKey = "name" | "emailAddress" | "userName" | "phoneNumber" | "password";
@@ -115,6 +115,86 @@ function CreateUserDrawer({ onClose, onCreated }: { onClose: () => void; onCreat
   );
 }
 
+type ResetKey = "newPassword" | "confirmPassword";
+
+function ResetPasswordDrawer({ user, onClose }: { user: User; onClose: () => void }) {
+  const [form, setForm] = useState<Record<ResetKey, string>>({ newPassword: "", confirmPassword: "" });
+  const [errors, setErrors] = useState<FieldErrors<ResetKey>>({});
+  const [formError, setFormError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const save = async () => {
+    const e: FieldErrors<ResetKey> = {};
+    if (!isStrongPassword(form.newPassword)) e.newPassword = "Mật khẩu tối thiểu 6 ký tự, gồm cả chữ và số";
+    if (form.confirmPassword !== form.newPassword) e.confirmPassword = "Mật khẩu nhập lại không khớp";
+    setErrors(e);
+    setFormError("");
+    if (Object.keys(e).length) return;
+    setBusy(true);
+    try {
+      await userApi.resetPassword(user.id, form.newPassword);
+      notify(`Đã đặt lại mật khẩu cho ${user.name}`);
+      onClose();
+    } catch (err) {
+      const api = toApiError(err);
+      const f = api.fieldErrors() as FieldErrors<ResetKey>;
+      setErrors(f);
+      if (!Object.keys(f).length) setFormError(api.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const fields: { key: ResetKey; label: string }[] = [
+    { key: "newPassword", label: "Mật khẩu mới *" },
+    { key: "confirmPassword", label: "Nhập lại mật khẩu mới *" },
+  ];
+
+  return (
+    <Drawer
+      open
+      width={460}
+      onClose={onClose}
+      header={<p className="font-serif text-[22px]">Đặt lại mật khẩu</p>}
+      footer={
+        <div className="flex w-full justify-end gap-2.5">
+          <button onClick={onClose} className="px-[18px] py-[11px] text-sm">
+            Hủy
+          </button>
+          <button onClick={save} disabled={busy} className="rounded-lg bg-navy px-6 py-[11px] text-sm font-semibold text-white disabled:opacity-60">
+            {busy ? "Đang lưu…" : "Đặt lại mật khẩu"}
+          </button>
+        </div>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <p className="text-[13.5px] text-muted2">
+          Tài khoản: <span className="font-semibold text-ink-2">{user.name}</span> ({user.emailAddress || user.userName})
+        </p>
+        <FormAlert message={formError} />
+        {fields.map((f) => (
+          <div key={f.key}>
+            <label htmlFor={`rp-${f.key}`} className="hsv-label">{f.label}</label>
+            <input
+              id={`rp-${f.key}`}
+              type="password"
+              autoComplete="new-password"
+              value={form[f.key]}
+              placeholder={f.key === "newPassword" ? "Tối thiểu 6 ký tự, gồm chữ và số" : undefined}
+              onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
+              className={cn("hsv-input h-11 text-sm", errors[f.key] && "hsv-input-error")}
+            />
+            <FieldError message={errors[f.key]} />
+          </div>
+        ))}
+        <p className="rounded-lg bg-surface px-4 py-3 text-[12.5px] text-muted2">
+          Báo mật khẩu mới cho người dùng qua kênh riêng. Mọi phiên đăng nhập hiện có của tài khoản này sẽ bị đăng xuất ngay.
+        </p>
+      </div>
+    </Drawer>
+  );
+}
+
 export default function AdminUsers() {
   const { session } = useAuth();
   const confirm = useConfirm();
@@ -123,6 +203,7 @@ export default function AdminUsers() {
   const [roleFilter, setRoleFilter] = useState<RoleName | undefined>(undefined);
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
+  const [resetting, setResetting] = useState<User | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
 
   const list = useApi(
@@ -146,7 +227,7 @@ export default function AdminUsers() {
   const onRole = async (u: User, role: RoleName) => {
     if (u.id === session?.userId) return notify("Không thể thay đổi quyền của chính mình");
     if (u.roleNames.length === 1 && u.roleNames[0] === role) return;
-    const ok = await confirm({ title: `Đổi quyền cho ${u.name}?`, body: `Vai trò mới: ${ROLE_LABEL[role]}.`, okLabel: "Xác nhận" });
+    const ok = await confirm({ title: `Đổi quyền cho ${u.name}?`, body: `Vai trò mới: ${ROLE_LABEL[role]}. Người dùng sẽ bị đăng xuất và cần đăng nhập lại để nhận quyền mới.`, okLabel: "Xác nhận" });
     if (ok) await run(u, () => userApi.setRoles(u.id, [role]), "Đã cập nhật quyền");
   };
 
@@ -197,7 +278,7 @@ export default function AdminUsers() {
         <ErrorBox error={list.error} onRetry={list.reload} />
       ) : (
         <div className={cn("hsv-card overflow-x-auto", list.loading && list.data && "opacity-70")}>
-          <div className="min-w-[900px]">
+          <div className="min-w-[990px]">
             <div className={cn("grid gap-3 bg-surface px-5 py-3 text-xs font-bold text-muted2", COLS)}>
               <span>Người dùng ({list.data?.totalCount ?? "…"})</span>
               <span>Điện thoại</span>
@@ -250,14 +331,24 @@ export default function AdminUsers() {
                     >
                       {u.isActive ? "Hoạt động" : "Đã khóa"}
                     </span>
-                    <button
-                      onClick={() => onLock(u)}
-                      disabled={isMe || busyId === u.id}
-                      title={isMe ? "Không thể khóa tài khoản của chính mình" : undefined}
-                      className={cn("text-right text-[13px] font-semibold", u.isActive ? "text-danger" : "text-ok", isMe && "cursor-not-allowed opacity-40")}
-                    >
-                      {u.isActive ? "Khóa" : "Mở khóa"}
-                    </button>
+                    <div className="flex justify-end gap-3 whitespace-nowrap">
+                      <button
+                        onClick={() => setResetting(u)}
+                        disabled={isMe || busyId === u.id}
+                        title={isMe ? "Không thể đặt lại mật khẩu của chính mình" : undefined}
+                        className={cn("text-[13px] font-semibold text-navy", isMe && "cursor-not-allowed opacity-40")}
+                      >
+                        Đặt lại mật khẩu
+                      </button>
+                      <button
+                        onClick={() => onLock(u)}
+                        disabled={isMe || busyId === u.id}
+                        title={isMe ? "Không thể khóa tài khoản của chính mình" : undefined}
+                        className={cn("text-[13px] font-semibold", u.isActive ? "text-danger" : "text-ok", isMe && "cursor-not-allowed opacity-40")}
+                      >
+                        {u.isActive ? "Khóa" : "Mở khóa"}
+                      </button>
+                    </div>
                   </div>
                 );
               })
@@ -268,6 +359,7 @@ export default function AdminUsers() {
       <Pager page={page} total={list.data?.totalCount ?? 0} pageSize={PAGE_SIZE} onChange={setPage} />
 
       {creating && <CreateUserDrawer onClose={() => setCreating(false)} onCreated={() => void list.reload()} />}
+      {resetting && <ResetPasswordDrawer user={resetting} onClose={() => setResetting(null)} />}
     </div>
   );
 }
