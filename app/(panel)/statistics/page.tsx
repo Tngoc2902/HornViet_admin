@@ -1,16 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { Chip, ErrorBox, LoadingRows, Skeleton } from "@/components/hsv/ui";
+import { Chip, ErrorBox, FormAlert, LoadingRows, Skeleton } from "@/components/hsv/ui";
 import { useApi } from "@/hooks/use-api";
 import { statisticApi } from "@/lib/api/services";
 import { RevenueGroupBy } from "@/lib/api/types";
 import { formatShortVND, formatVND, toDateParam } from "@/lib/hsv/format";
+import { mockRevenue, mockTopProducts } from "@/lib/hsv/mock-cost";
 import { cn } from "@/lib/utils";
 
 type Month = { y: number; m: number };
 
 /** Các khoảng thời gian tính theo ngày hiện tại → fromDate/toDate (yyyy-MM-dd). */
+/** Backend cũ (chưa cập nhật) không trả giá vốn/lợi nhuận → dev: dữ liệu ảo (mock-cost), production: hiện "—". */
+const money = (v: number | null | undefined) => (v == null ? "—" : formatVND(Math.round(v)));
+
 function buildRanges(now: Date) {
   const y = now.getFullYear();
   const m = now.getMonth() + 1;
@@ -49,17 +53,21 @@ export default function AdminStatistics() {
 
   // Doanh thu chỉ tính trên đơn ở trạng thái "Hoàn thành" (phía server).
   const revenue = useApi(
-    () => statisticApi.getRevenue({ fromDate: range.fromDate, toDate: range.toDate, groupBy: RevenueGroupBy.Month }),
+    () => statisticApi.getRevenue({ fromDate: range.fromDate, toDate: range.toDate, groupBy: RevenueGroupBy.Month }).then(mockRevenue),
     [range.key]
   );
-  const top = useApi(() => statisticApi.getTopProducts({ fromDate: range.fromDate, toDate: range.toDate, top: 5 }), [range.key]);
+  const top = useApi(
+    () => statisticApi.getTopProducts({ fromDate: range.fromDate, toDate: range.toDate, top: 5 }).then((t) => mockTopProducts(t.items)),
+    [range.key]
+  );
 
-  const r = revenue.data;
+  const r = revenue.data?.data;
+  const topItems = top.data?.data;
   // items chỉ có kỳ phát sinh doanh thu → tự điền 0 cho tháng trống.
   const byMonth = new Map((r?.items ?? []).map((p) => [p.period.slice(0, 7), p]));
   const buckets = range.months.map(({ y, m }) => {
     const p = byMonth.get(`${y}-${String(m).padStart(2, "0")}`);
-    return { label: `T${m}`, full: `Tháng ${m}/${y}`, value: p?.revenue ?? 0, count: p?.orderCount ?? 0 };
+    return { label: `T${m}`, full: `Tháng ${m}/${y}`, value: p?.revenue ?? 0, count: p?.orderCount ?? 0, profit: p ? p.profit : 0 };
   });
   const max = Math.max(1, ...buckets.map((b) => b.value));
   const showAllLabels = buckets.length <= 6;
@@ -74,7 +82,6 @@ export default function AdminStatistics() {
             {x.label}
           </Chip>
         ))}
-        <span className="ml-auto text-[12.5px] text-faint">Doanh thu chỉ tính trên đơn “Hoàn thành”</span>
       </div>
 
       {revenue.error && !r ? (
@@ -86,19 +93,29 @@ export default function AdminStatistics() {
         </div>
       ) : (
         <>
-          <div className="mb-3.5 grid gap-3.5 sm:grid-cols-3">
+          {r && (r.uncostedQuantity ?? 0) > 0 && (
+            <div className="mb-3.5">
+              <FormAlert
+                tone="warn"
+                message={`${r.uncostedQuantity} sản phẩm đã bán chưa có giá vốn (bán trước khi có phiếu nhập kho) nên không được tính vào giá vốn và lợi nhuận.`}
+              />
+            </div>
+          )}
+          <div className="mb-3.5 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
             {(r
               ? [
-                  ["Doanh thu", formatVND(r.totalRevenue)],
-                  ["Đơn hoàn thành", String(r.orderCount)],
-                  ["Giá trị trung bình / đơn", formatVND(Math.round(r.totalRevenue / Math.max(1, r.orderCount) / 1000) * 1000)],
+                  ["Doanh thu", formatVND(r.totalRevenue), `${r.orderCount} đơn hoàn thành`],
+                  ["Giá vốn hàng bán", money(r.totalCost), ""],
+                  ["Lợi nhuận gộp", money(r.totalProfit), ""],
+                  ["Tỷ suất lợi nhuận", r.profitMargin == null ? "—" : `${r.profitMargin.toLocaleString("vi-VN")}%`, ""],
                 ]
-              : [["", ""], ["", ""], ["", ""]]
-            ).map(([l, v], i) =>
+              : [["", "", ""], ["", "", ""], ["", "", ""], ["", "", ""]]
+            ).map(([l, v, note], i) =>
               r ? (
                 <div key={l} className="hsv-card p-5">
                   <p className="text-[13px] text-subtle">{l}</p>
-                  <p className="mt-2 text-[26px] font-bold">{v}</p>
+                  <p className={cn("mt-2 text-[26px] font-bold", l === "Lợi nhuận gộp" && r.totalProfit < 0 && "text-danger")}>{v}</p>
+                  {note && <p className="mt-1 text-[12px] text-faint">{note}</p>}
                 </div>
               ) : (
                 <Skeleton key={i} className="h-[104px]" />
@@ -135,6 +152,7 @@ export default function AdminStatistics() {
                               <p className="mt-0.5">
                                 {formatVND(b.value)} · {b.count} đơn
                               </p>
+                              <p className="mt-0.5">Lợi nhuận: {money(b.profit)}</p>
                             </div>
                           )}
                         </div>
@@ -155,6 +173,7 @@ export default function AdminStatistics() {
                         <th>Tháng</th>
                         <th>Doanh thu</th>
                         <th>Số đơn</th>
+                        <th>Lợi nhuận</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -163,6 +182,7 @@ export default function AdminStatistics() {
                           <td>{b.full}</td>
                           <td>{formatVND(b.value)}</td>
                           <td>{b.count}</td>
+                          <td>{money(b.profit)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -173,21 +193,24 @@ export default function AdminStatistics() {
 
             <div className="hsv-card p-[22px]">
               <p className="mb-2.5 text-[15px] font-bold">Sản phẩm bán chạy</p>
-              {top.error && !top.data ? (
+              {top.error && !topItems ? (
                 <ErrorBox error={top.error} onRetry={top.reload} />
-              ) : !top.data ? (
+              ) : !topItems ? (
                 <LoadingRows rows={5} />
-              ) : top.data.items.length === 0 ? (
+              ) : topItems.length === 0 ? (
                 <p className="text-[13.5px] text-subtle">Chưa có dữ liệu.</p>
               ) : (
-                top.data.items.map((b, i) => (
+                topItems.map((b, i) => (
                   <div key={b.productId} className="flex items-center gap-3 border-t border-line-2 py-2.5">
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface text-[13px] font-bold text-gold">{i + 1}</span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[13.5px] font-semibold">{b.productName}</span>
                       <span className="block text-xs text-subtle">{b.quantitySold} sản phẩm</span>
                     </span>
-                    <span className="text-[13px] font-bold">{formatVND(b.revenue)}</span>
+                    <span className="text-right">
+                      <span className="block text-[13px] font-bold">{formatVND(b.revenue)}</span>
+                      <span className={cn("block text-xs", (b.profit ?? 0) < 0 ? "text-danger" : "text-ok")}>Lãi {money(b.profit)}</span>
+                    </span>
                   </div>
                 ))
               )}

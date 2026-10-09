@@ -7,13 +7,33 @@ import { Chip, Drawer, ErrorBox, LoadingRows, notify, OrderProgress, Pager, Stat
 import { useApi, useDebounced } from "@/hooks/use-api";
 import { toApiError } from "@/lib/api/http";
 import { orderApi } from "@/lib/api/services";
-import { OrderStatus, PaymentMethod } from "@/lib/api/types";
+import { OrderStatus, PaymentMethod, type OrderListItem, type OrderLineSummary, type PagedResult } from "@/lib/api/types";
 import { emitOrdersChanged } from "@/lib/hsv/events";
 import { formatDateTime, formatVND, ORDER_STATUS, ORDER_TABS, parseOrderTab, PAYMENT_LABEL } from "@/lib/hsv/format";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 15;
-const COLS = "grid-cols-[110px_minmax(0,1.4fr)_140px_90px_110px_120px_120px]";
+const COLS = "grid-cols-[110px_minmax(0,1fr)_minmax(0,1.8fr)_140px_60px_110px_120px_120px]";
+
+/** Backend cũ chưa trả `items` trong danh sách đơn → lấy từ chi tiết từng đơn trên trang. */
+async function withItems(result: PagedResult<OrderListItem>): Promise<PagedResult<OrderListItem>> {
+  if (result.items.every((o) => o.items)) return result;
+  const items = await Promise.all(
+    result.items.map(async (o) => (o.items ? o : { ...o, items: (await orderApi.get(o.id)).items }))
+  );
+  return { ...result, items };
+}
+
+/** Chỉ tên sản phẩm (gộp các biến thể cùng sản phẩm), một dòng. */
+function OrderProducts({ lines }: { lines?: OrderLineSummary[] }) {
+  if (!lines) return <span className="text-[12.5px] text-faint">…</span>;
+  const names = [...new Set(lines.map((l) => l.productName))].join(", ");
+  return (
+    <span className="truncate text-[13px]" title={names}>
+      {names}
+    </span>
+  );
+}
 
 /** Bước tiếp theo hợp lệ: Chờ xử lý → Đang giao → Hoàn thành. */
 const NEXT: Partial<Record<OrderStatus, { to: OrderStatus; label: string }>> = {
@@ -167,7 +187,10 @@ export default function AdminOrders() {
   const dateError = from && to && from > to ? "Ngày bắt đầu phải trước ngày kết thúc." : "";
   const filters = { keyword: keyword || undefined, fromDate: from || undefined, toDate: to || undefined };
   const list = useApi(
-    () => orderApi.getAll({ ...filters, status: status === "all" ? undefined : status, skipCount: (page - 1) * PAGE_SIZE, maxResultCount: PAGE_SIZE }),
+    () =>
+      orderApi
+        .getAll({ ...filters, status: status === "all" ? undefined : status, skipCount: (page - 1) * PAGE_SIZE, maxResultCount: PAGE_SIZE })
+        .then(withItems),
     [status, keyword, from, to, page],
     !dateError
   );
@@ -244,10 +267,11 @@ export default function AdminOrders() {
         <ErrorBox error={list.error} onRetry={list.reload} />
       ) : (
         <div className={cn("hsv-card overflow-x-auto", list.loading && list.data && "opacity-70")}>
-          <div className="min-w-[860px]">
+          <div className="min-w-[1040px]">
             <div className={cn("grid gap-3 bg-surface px-5 py-3 text-xs font-bold text-muted2", COLS)}>
               <span>Mã đơn</span>
               <span>Người nhận</span>
+              <span>Sản phẩm</span>
               <span>Ngày đặt</span>
               <span>Số SP</span>
               <span>Thanh toán</span>
@@ -267,6 +291,7 @@ export default function AdminOrders() {
                 >
                   <span className="text-[13px] font-bold">{o.code}</span>
                   <span className="truncate text-[13.5px] font-semibold">{o.receiverName}</span>
+                  <OrderProducts lines={o.items} />
                   <span className="text-[12.5px] text-muted2">{formatDateTime(o.creationTime)}</span>
                   <span className="text-[13px]">{o.itemCount}</span>
                   <span className="text-[12.5px] text-muted2">{o.paymentMethod === PaymentMethod.Cod ? "COD" : "Chuyển khoản"}</span>

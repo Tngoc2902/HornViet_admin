@@ -32,7 +32,8 @@ Backend phải đang chạy và có `http://localhost:3001` trong `App:CorsOrigi
 | `/products` | Sản phẩm & biến thể | Nhân viên, Quản trị viên |
 | `/orders` | Đơn hàng | Nhân viên, Quản trị viên |
 | `/users` | Người dùng: tạo tài khoản, đổi vai trò, khóa / mở khóa, đặt lại mật khẩu | Quản trị viên |
-| `/statistics` | Thống kê | Quản trị viên |
+| `/inventory` | Nhập kho & giá vốn: giá vốn bình quân, giá trị tồn, lãi / sản phẩm; nút **+ Nhập hàng** (đầu trang: chọn sản phẩm; hoặc trên từng dòng), xem trước giá vốn mới; sửa / hủy phiếu mới nhất | Quản trị viên |
+| `/statistics` | Thống kê doanh thu, giá vốn hàng bán, lợi nhuận gộp, tỷ suất lợi nhuận, sản phẩm bán chạy | Quản trị viên |
 
 Nút **Đổi mật khẩu** ở cuối thanh bên (mọi tài khoản quản trị): đổi xong mọi phiên của tài khoản bị đăng xuất, kể cả phiên hiện tại.
 
@@ -51,3 +52,8 @@ lib/hsv              Định dạng tiền/ngày, trạng thái đơn, kiểm tr
 Riêng `lib/api/services.ts` của trang quản trị khác bản cửa hàng ở hai chỗ: `authApi.authenticate` gọi
 `/api/TokenAuth/AuthenticateAdmin` và `userApi.resetPassword` (`PUT /api/services/app/User/ResetPassword`).
 `components/hsv/password-reset-forms.tsx` (form Quên / Đặt lại mật khẩu) giống hệt bản bên repo cửa hàng.
+`lib/hsv/mock-cost.ts` chỉ có ở trang quản trị: khi chạy dev mà backend chưa có chức năng nhập kho (không trả giá vốn / lợi nhuận,
+API `StockReceipt` trả 404), Tổng quan, Thống kê và Nhập kho hiện **dữ liệu ảo**. Trang Nhập kho vẫn nhập / sửa / hủy phiếu được:
+phiếu ảo chỉ lưu trong trình duyệt (localStorage `hsv-mock-stock-receipts`), giá vốn bình quân tính lại như backend, không ghi vào database.
+Khi backend bản mới chạy, trang tự dùng dữ liệu thật.
+Bản build production không dùng dữ liệu ảo (thiếu dữ liệu thì hiện "—").

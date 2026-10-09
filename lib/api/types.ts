@@ -166,7 +166,11 @@ export type OrderListItem = {
   itemCount: number;
   receiverName: string;
   canCancel: boolean;
+  /** Sản phẩm trong đơn. Backend cũ chưa trả trường này. */
+  items?: OrderLineSummary[];
 };
+
+export type OrderLineSummary = { productName: string; variantName: string; quantity: number };
 
 export type OrderItem = {
   id: number;
@@ -178,7 +182,7 @@ export type OrderItem = {
   lineTotal: number;
 };
 
-export type Order = OrderListItem & {
+export type Order = Omit<OrderListItem, "items"> & {
   userId: number;
   userName: string | null;
   phoneNumber: string;
@@ -226,9 +230,58 @@ export type Dashboard = {
   /** null khi Nhân viên gọi. */
   todayRevenue: number | null;
   monthRevenue: number | null;
+  /** Lợi nhuận gộp tháng này — null khi Nhân viên gọi. */
+  monthProfit: number | null;
   lowStockVariants: LowStockVariant[];
 };
 
-export type RevenuePoint = { period: string; revenue: number; orderCount: number };
-export type RevenueReport = { fromDate: string; toDate: string; totalRevenue: number; orderCount: number; items: RevenuePoint[] };
-export type TopProduct = { productId: number; productName: string; quantitySold: number; revenue: number };
+/** cost / profit chỉ tính trên sản phẩm có giá vốn; uncostedQuantity = số sp đã bán chưa có giá vốn (đơn cũ). */
+export type RevenuePoint = { period: string; revenue: number; orderCount: number; cost: number; profit: number; uncostedQuantity: number };
+export type RevenueReport = {
+  fromDate: string;
+  toDate: string;
+  totalRevenue: number;
+  orderCount: number;
+  totalCost: number;
+  totalProfit: number;
+  /** % — null nếu chưa có sản phẩm nào có giá vốn. */
+  profitMargin: number | null;
+  uncostedQuantity: number;
+  items: RevenuePoint[];
+};
+export type TopProduct = { productId: number; productName: string; quantitySold: number; revenue: number; profit: number; uncostedQuantity: number };
+
+// ---------- Nhập kho & giá vốn (chỉ Quản trị viên)
+export type StockReceipt = {
+  id: number;
+  creationTime: string;
+  productId: number;
+  productName: string;
+  productVariantId: number;
+  variantName: string;
+  quantity: number;
+  unitCost: number;
+  totalCost: number;
+  note: string | null;
+  creatorUserName: string | null;
+  lastModificationTime: string | null;
+  /** Phiếu mới nhất của biến thể → được sửa / hủy. */
+  canEdit: boolean;
+};
+
+export type VariantCost = {
+  productVariantId: number;
+  productId: number;
+  productName: string;
+  variantName: string;
+  salePrice: number;
+  stockQuantity: number;
+  /** null = chưa có phiếu nhập. */
+  averageCost: number | null;
+  stockValue: number | null;
+  unitProfit: number | null;
+  lastReceiptTime: string | null;
+};
+
+export type StockReceiptInput = { productVariantId: number; quantity: number; unitCost: number; note?: string };
+export type StockReceiptUpdateInput = { id: number; quantity: number; unitCost: number; note?: string };
