@@ -14,8 +14,6 @@ import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 15;
 const COLS = "grid-cols-[110px_minmax(0,1fr)_minmax(0,1.8fr)_140px_60px_110px_120px_120px]";
-/** Số dòng sản phẩm hiện trong danh sách, phần còn lại gộp thành "+N sản phẩm khác". */
-const SHOWN_LINES = 2;
 
 /** Backend cũ chưa trả `items` trong danh sách đơn → lấy từ chi tiết từng đơn trên trang. */
 async function withItems(result: PagedResult<OrderListItem>): Promise<PagedResult<OrderListItem>> {
@@ -26,17 +24,13 @@ async function withItems(result: PagedResult<OrderListItem>): Promise<PagedResul
   return { ...result, items };
 }
 
-function OrderLines({ lines }: { lines?: OrderLineSummary[] }) {
+/** Chỉ tên sản phẩm (gộp các biến thể cùng sản phẩm), một dòng. */
+function OrderProducts({ lines }: { lines?: OrderLineSummary[] }) {
   if (!lines) return <span className="text-[12.5px] text-faint">…</span>;
-  const rest = lines.length - SHOWN_LINES;
+  const names = [...new Set(lines.map((l) => l.productName))].join(", ");
   return (
-    <span className="min-w-0 text-[12.5px]" title={lines.map((l) => `${l.productName} (${l.variantName}) ×${l.quantity}`).join("\n")}>
-      {lines.slice(0, SHOWN_LINES).map((l, i) => (
-        <span key={i} className="block truncate">
-          {l.productName} <span className="text-subtle">· {l.variantName}</span> <b>×{l.quantity}</b>
-        </span>
-      ))}
-      {rest > 0 && <span className="block text-xs text-subtle">+{rest} sản phẩm khác</span>}
+    <span className="truncate text-[13px]" title={names}>
+      {names}
     </span>
   );
 }
@@ -297,7 +291,7 @@ export default function AdminOrders() {
                 >
                   <span className="text-[13px] font-bold">{o.code}</span>
                   <span className="truncate text-[13.5px] font-semibold">{o.receiverName}</span>
-                  <OrderLines lines={o.items} />
+                  <OrderProducts lines={o.items} />
                   <span className="text-[12.5px] text-muted2">{formatDateTime(o.creationTime)}</span>
                   <span className="text-[13px]">{o.itemCount}</span>
                   <span className="text-[12.5px] text-muted2">{o.paymentMethod === PaymentMethod.Cod ? "COD" : "Chuyển khoản"}</span>
