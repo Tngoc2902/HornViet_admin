@@ -30,9 +30,13 @@ import type {
   RevenueReport,
   Role,
   RoleName,
+  StockReceipt,
+  StockReceiptInput,
+  StockReceiptUpdateInput,
   TopProduct,
   User,
   UserQuery,
+  VariantCost,
 } from "./types";
 
 const app = (path: string) => `/api/services/app/${path}`;
@@ -125,4 +129,15 @@ export const statisticApi = {
     http.get<RevenueReport>(app("Statistic/GetRevenue"), q),
   getTopProducts: (q: { fromDate?: string; toDate?: string; top?: number }) =>
     http.get<ListResult<TopProduct>>(app("Statistic/GetTopProducts"), q),
+};
+
+/** Nhập kho & giá vốn — chỉ Quản trị viên. */
+export const stockReceiptApi = {
+  getAll: (q: PageInput & { productVariantId?: number; keyword?: string } = {}) =>
+    http.get<PagedResult<StockReceipt>>(app("StockReceipt/GetAll"), q),
+  getVariantCosts: (q: PageInput & { keyword?: string } = {}) => http.get<PagedResult<VariantCost>>(app("StockReceipt/GetVariantCosts"), q),
+  create: (input: StockReceiptInput) => http.post<StockReceipt>(app("StockReceipt/Create"), input),
+  /** Chỉ phiếu mới nhất của biến thể; giá vốn các đơn bán sau phiếu được tính lại. */
+  update: (input: StockReceiptUpdateInput) => http.put<StockReceipt>(app("StockReceipt/Update"), input),
+  delete: (id: number) => http.delete<null>(app("StockReceipt/Delete"), { id }),
 };
