@@ -6,7 +6,7 @@ import { useApi } from "@/hooks/use-api";
 import { statisticApi } from "@/lib/api/services";
 import { RevenueGroupBy } from "@/lib/api/types";
 import { formatShortVND, formatVND, toDateParam } from "@/lib/hsv/format";
-import { MOCK_NOTICE, mockRevenue, mockTopProducts } from "@/lib/hsv/mock-cost";
+import { mockRevenue, mockTopProducts } from "@/lib/hsv/mock-cost";
 import { cn } from "@/lib/utils";
 
 type Month = { y: number; m: number };
@@ -63,7 +63,6 @@ export default function AdminStatistics() {
 
   const r = revenue.data?.data;
   const topItems = top.data?.data;
-  const mocked = !!revenue.data?.mocked || !!top.data?.mocked;
   // items chỉ có kỳ phát sinh doanh thu → tự điền 0 cho tháng trống.
   const byMonth = new Map((r?.items ?? []).map((p) => [p.period.slice(0, 7), p]));
   const buckets = range.months.map(({ y, m }) => {
@@ -95,11 +94,6 @@ export default function AdminStatistics() {
         </div>
       ) : (
         <>
-          {mocked && (
-            <div className="mb-3.5">
-              <FormAlert tone="warn" message={MOCK_NOTICE} />
-            </div>
-          )}
           {r && (r.uncostedQuantity ?? 0) > 0 && (
             <div className="mb-3.5">
               <FormAlert
