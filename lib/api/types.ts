@@ -166,7 +166,11 @@ export type OrderListItem = {
   itemCount: number;
   receiverName: string;
   canCancel: boolean;
+  /** Sản phẩm trong đơn. Backend cũ chưa trả trường này. */
+  items?: OrderLineSummary[];
 };
+
+export type OrderLineSummary = { productName: string; variantName: string; quantity: number };
 
 export type OrderItem = {
   id: number;
@@ -178,7 +182,7 @@ export type OrderItem = {
   lineTotal: number;
 };
 
-export type Order = OrderListItem & {
+export type Order = Omit<OrderListItem, "items"> & {
   userId: number;
   userName: string | null;
   phoneNumber: string;
