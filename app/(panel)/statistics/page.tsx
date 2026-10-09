@@ -82,7 +82,6 @@ export default function AdminStatistics() {
             {x.label}
           </Chip>
         ))}
-        <span className="ml-auto text-[12.5px] text-faint">Doanh thu và lợi nhuận chỉ tính trên đơn “Hoàn thành”</span>
       </div>
 
       {revenue.error && !r ? (
@@ -106,9 +105,9 @@ export default function AdminStatistics() {
             {(r
               ? [
                   ["Doanh thu", formatVND(r.totalRevenue), `${r.orderCount} đơn hoàn thành`],
-                  ["Giá vốn hàng bán", money(r.totalCost), "Theo giá vốn bình quân lúc bán"],
-                  ["Lợi nhuận gộp", money(r.totalProfit), "Doanh thu − giá vốn"],
-                  ["Tỷ suất lợi nhuận", r.profitMargin == null ? "—" : `${r.profitMargin.toLocaleString("vi-VN")}%`, "Lợi nhuận / doanh thu"],
+                  ["Giá vốn hàng bán", money(r.totalCost), ""],
+                  ["Lợi nhuận gộp", money(r.totalProfit), ""],
+                  ["Tỷ suất lợi nhuận", r.profitMargin == null ? "—" : `${r.profitMargin.toLocaleString("vi-VN")}%`, ""],
                 ]
               : [["", "", ""], ["", "", ""], ["", "", ""], ["", "", ""]]
             ).map(([l, v, note], i) =>
@@ -116,7 +115,7 @@ export default function AdminStatistics() {
                 <div key={l} className="hsv-card p-5">
                   <p className="text-[13px] text-subtle">{l}</p>
                   <p className={cn("mt-2 text-[26px] font-bold", l === "Lợi nhuận gộp" && r.totalProfit < 0 && "text-danger")}>{v}</p>
-                  <p className="mt-1 text-[12px] text-faint">{note}</p>
+                  {note && <p className="mt-1 text-[12px] text-faint">{note}</p>}
                 </div>
               ) : (
                 <Skeleton key={i} className="h-[104px]" />

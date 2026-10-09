@@ -184,11 +184,6 @@ function ReceiptDrawer({
             )}
           </div>
         )}
-        <p className="rounded-lg bg-surface px-4 py-3 text-[12.5px] text-muted2">
-          Giá vốn tính theo bình quân di động: mỗi lần nhập, giá vốn = (tồn × giá vốn cũ + số nhập × giá nhập) / tổng số lượng.
-          Đơn bán sau đó lưu giá vốn này để tính lợi nhuận.
-          {receipt && " Sửa phiếu sẽ tính lại giá vốn của các đơn đã bán biến thể này từ sau thời điểm nhập."}
-        </p>
       </div>
     </Drawer>
   );
@@ -399,8 +394,7 @@ export default function AdminInventory() {
         <Chip active={tab === "receipts"} onClick={() => setTab("receipts")}>
           Lịch sử nhập
         </Chip>
-        <span className="ml-auto text-[12.5px] text-faint">Chỉ Quản trị viên xem được giá nhập và giá vốn</span>
-        <button onClick={() => setReceiving(true)} className="rounded-lg bg-navy px-[18px] py-2.5 text-[13.5px] font-semibold text-white">
+        <button onClick={() => setReceiving(true)} className="ml-auto rounded-lg bg-navy px-[18px] py-2.5 text-[13.5px] font-semibold text-white">
           + Nhập hàng
         </button>
       </div>
