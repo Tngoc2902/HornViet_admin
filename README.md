@@ -1,6 +1,6 @@
 # Hồn Sừng Việt — Trang quản trị
 
-Frontend phân hệ quản trị (Nhân viên, Quản trị viên) của website Hồn Sừng Việt. Trang cửa hàng cho khách hàng nằm ở repo riêng; cả hai gọi chung backend `Website.Api`.
+Frontend phân hệ quản trị (Nhân viên, Quản trị viên) của website Hồn Sừng Việt. Trang cửa hàng cho khách hàng nằm ở repo riêng; cả hai gọi chung backend `HornViet.Api`.
 
 Công nghệ: Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS.
 
@@ -12,7 +12,7 @@ cp .env.example .env.local   # sửa địa chỉ backend nếu cần
 npm run dev                  # http://localhost:3001
 ```
 
-Backend phải đang chạy và có `http://localhost:3001` trong `App:CorsOrigins` (`Website.Api/appsettings.json`), nếu không mọi lời gọi API bị trình duyệt chặn.
+Backend phải đang chạy và có `http://localhost:3001` trong `App:CorsOrigins` (`HornViet.Api/appsettings.json`), nếu không mọi lời gọi API bị trình duyệt chặn.
 
 | Biến | Ý nghĩa | Mặc định dev |
 | --- | --- | --- |
