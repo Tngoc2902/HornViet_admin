@@ -46,8 +46,8 @@ export type AddressInput = Omit<Address, "id"> & { id?: number };
 export type Category = { id: number; name: string; description: string | null; productCount: number; creationTime: string };
 export type CategoryInput = { id?: number; name: string; description?: string | null };
 
-export type Material = { id: number; name: string; origin: string | null; description: string | null };
-export type MaterialInput = { id?: number; name: string; origin?: string | null; description?: string | null };
+export type Material = { id: number; name: string; origin: string | null; description: string | null; image?: string | null };
+export type MaterialInput = { id?: number; name: string; origin?: string | null; description?: string | null; image?: string | null };
 
 export type ProductListItem = {
   id: number;

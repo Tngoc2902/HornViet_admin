@@ -6,7 +6,8 @@ import { Suspense, useEffect, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { FieldError, FormAlert, notify } from "@/components/hsv/ui";
 import { useAuth } from "@/contexts/auth-context";
-import { toApiError } from "@/lib/api/http";
+import { STORE_URL, toApiError } from "@/lib/api/http";
+import { landingFor } from "@/lib/hsv/admin-routes";
 import type { FieldErrors } from "@/lib/hsv/validation";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +28,7 @@ function AdminLoginForm() {
 
   // Đã đăng nhập bằng tài khoản quản trị → vào thẳng trang quản trị.
   useEffect(() => {
-    if (session) router.replace(returnUrl);
+    if (session) router.replace(landingFor(returnUrl, session.roles));
   }, [session, router, returnUrl]);
 
   const submit = async (e: React.FormEvent) => {
@@ -42,7 +43,7 @@ function AdminLoginForm() {
     try {
       const s = await login(identifier, pass);
       notify("Xin chào " + s.name);
-      router.replace(returnUrl);
+      router.replace(landingFor(returnUrl, s.roles));
     } catch (err) {
       const api = toApiError(err);
       const f = api.fieldErrors();
@@ -95,14 +96,9 @@ function AdminLoginForm() {
               <FieldError message={errors.identifier} />
             </div>
             <div>
-              <div className="flex items-baseline justify-between gap-3">
-                <label htmlFor="al-pass" className="hsv-label">
-                  Mật khẩu
-                </label>
-                <Link href="/forgot-password" className="text-[13px] font-semibold text-gold">
-                  Quên mật khẩu?
-                </Link>
-              </div>
+              <label htmlFor="al-pass" className="hsv-label">
+                Mật khẩu
+              </label>
               <input
                 id="al-pass"
                 type="password"
@@ -117,13 +113,21 @@ function AdminLoginForm() {
               {busy ? "Đang đăng nhập…" : "Đăng nhập"}
             </button>
           </div>
+
+          <p className="mt-5 text-center text-[13px]">
+            <Link href="/forgot-password" className="font-semibold text-gold">
+              Quên mật khẩu?
+            </Link>
+          </p>
         </form>
 
-        <p className="mt-5 text-center text-[13px] text-subtle">
-          <a href={process.env.NEXT_PUBLIC_STORE_URL || "http://localhost:3000"} className="font-semibold text-ink-2 hover:text-navy">
-            ← Về cửa hàng
-          </a>
-        </p>
+        {STORE_URL && (
+          <p className="mt-5 text-center text-[13px] text-subtle">
+            <a href={STORE_URL} className="font-semibold text-ink-2 hover:text-navy">
+              ← Về cửa hàng
+            </a>
+          </p>
+        )}
       </div>
     </div>
   );
