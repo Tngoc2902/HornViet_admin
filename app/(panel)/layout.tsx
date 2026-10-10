@@ -8,19 +8,19 @@ import { ChangePasswordDrawer } from "@/components/hsv/change-password-drawer";
 import { notify } from "@/components/hsv/ui";
 import { useAuth } from "@/contexts/auth-context";
 import { useApi } from "@/hooks/use-api";
+import { STORE_URL } from "@/lib/api/http";
 import { statisticApi } from "@/lib/api/services";
 import { ORDERS_CHANGED } from "@/lib/hsv/events";
 import { roleLabel } from "@/lib/hsv/format";
 import { cn } from "@/lib/utils";
 
-const STORE_URL = process.env.NEXT_PUBLIC_STORE_URL || "http://localhost:3000";
-
-// Menu render theo quyền: "Quản lý" = Nhân viên + Quản trị viên; Người dùng & Thống kê chỉ Admin.
+// Menu render theo quyền: "Quản lý" = Nhân viên + Quản trị viên; Nhập kho, Người dùng & Thống kê chỉ Admin
+// (giữ khớp với ADMIN_ONLY_PATHS trong lib/hsv/admin-routes.ts — dùng cho trang đăng nhập).
 const ADMIN_NAV = [
   { href: "/", label: "Tổng quan", title: "Tổng quan", icon: LayoutGrid, adminOnly: false },
   { href: "/categories", label: "Danh mục", title: "Quản lý danh mục", icon: FolderTree, adminOnly: false },
   { href: "/materials", label: "Nguyên liệu", title: "Nguyên liệu & nguồn gốc", icon: Gem, adminOnly: false },
-  { href: "/products", label: "Sản phẩm & biến thể", title: "Sản phẩm & biến thể", icon: Package, adminOnly: false },
+  { href: "/products", label: "Sản phẩm", title: "Sản phẩm", icon: Package, adminOnly: false },
   { href: "/orders", label: "Đơn hàng", title: "Quản lý đơn hàng", icon: ShoppingCart, adminOnly: false },
   { href: "/inventory", label: "Nhập kho", title: "Nhập kho & giá vốn", icon: Warehouse, adminOnly: true },
   { href: "/users", label: "Người dùng", title: "Quản lý người dùng", icon: Users, adminOnly: true },
@@ -44,6 +44,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (!session) router.replace(`/login?returnUrl=${encodeURIComponent(pathname)}`);
   }, [session, router, pathname]);
+
+  // Nhân viên vào trang chỉ dành cho Quản trị viên (VD đăng nhập lại bằng tài khoản Nhân viên với returnUrl cũ,
+  // hoặc tài khoản vừa bị đổi vai trò) → về Tổng quan thay vì hiện trang "không có quyền".
+  useEffect(() => {
+    if (!session || !forbidden) return;
+    notify("Chức năng này chỉ dành cho Quản trị viên — đã chuyển về Tổng quan");
+    router.replace("/");
+  }, [session, forbidden, router]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -97,9 +105,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <p className="text-[13.5px] font-semibold">{session.name}</p>
         <p className="mt-0.5 text-xs font-semibold text-gold">{roleLabel(session.roles)}</p>
         <div className="mt-3 flex flex-wrap gap-x-3.5 gap-y-1.5">
-          <a href={STORE_URL} target="_blank" rel="noreferrer" className="text-[12.5px] font-semibold text-ink-2">
-            Xem cửa hàng
-          </a>
+          {STORE_URL && (
+            <a href={STORE_URL} target="_blank" rel="noreferrer" className="text-[12.5px] font-semibold text-ink-2">
+              Xem cửa hàng
+            </a>
+          )}
           <button onClick={() => setChangingPassword(true)} className="text-[12.5px] font-semibold text-ink-2">
             Đổi mật khẩu
           </button>
@@ -132,18 +142,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <button className="lg:hidden" aria-label="Mở menu" onClick={() => setMobileOpen((v) => !v)}>
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
-          <h1 className="text-[22px] font-bold uppercase tracking-[0.05em]">
-            {forbidden ? "Không có quyền truy cập" : (current?.title ?? "Quản trị")}
-          </h1>
+          <h1 className="text-[22px] font-bold uppercase tracking-[0.05em]">{forbidden ? "Tổng quan" : (current?.title ?? "Quản trị")}</h1>
         </div>
-        {forbidden ? (
-          <div className="rounded-card border border-dashed border-line-3 px-6 py-20 text-center">
-            <p className="text-base font-semibold">Chức năng này chỉ dành cho Quản trị viên</p>
-            <Link href="/" className="mt-4 inline-block text-sm font-semibold text-gold">
-              Về trang tổng quan →
-            </Link>
-          </div>
-        ) : (
+        {/* Trang chỉ dành cho Quản trị viên: không render nội dung trong lúc chuyển về Tổng quan. */}
+        {!forbidden && (
           <Suspense>
             <div className="animate-hin">{children}</div>
           </Suspense>

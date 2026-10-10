@@ -29,7 +29,7 @@ Backend phải đang chạy và có `http://localhost:3001` trong `App:CorsOrigi
 | `/` | Tổng quan | Nhân viên, Quản trị viên |
 | `/categories` | Danh mục | Nhân viên, Quản trị viên |
 | `/materials` | Nguyên liệu & nguồn gốc | Nhân viên, Quản trị viên |
-| `/products` | Sản phẩm & biến thể | Nhân viên, Quản trị viên |
+| `/products` | Sản phẩm | Nhân viên, Quản trị viên |
 | `/orders` | Đơn hàng | Nhân viên, Quản trị viên |
 | `/users` | Người dùng: tạo tài khoản, đổi vai trò, khóa / mở khóa, đặt lại mật khẩu | Quản trị viên |
 | `/inventory` | Nhập kho & giá vốn: giá vốn bình quân, giá trị tồn, lãi / sản phẩm; nút **+ Nhập hàng** (đầu trang: chọn sản phẩm; hoặc trên từng dòng), xem trước giá vốn mới; sửa / hủy phiếu mới nhất | Quản trị viên |

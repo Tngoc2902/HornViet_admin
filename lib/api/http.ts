@@ -4,6 +4,10 @@
 
 export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/+$/, "");
 
+/** Địa chỉ trang cửa hàng. Mặc định localhost chỉ áp dụng khi chạy dev, tránh deploy quên cấu hình mà vẫn trỏ về localhost. */
+export const STORE_URL =
+  process.env.NEXT_PUBLIC_STORE_URL || (process.env.NODE_ENV === "production" ? "" : "http://localhost:3000");
+
 const TOKEN_KEY = "hsv-access-token";
 
 export type ValidationError = { message: string; members?: string[] };

@@ -1,9 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Chip, ErrorBox, FormAlert, LoadingRows, Skeleton } from "@/components/hsv/ui";
+import { FileSpreadsheet, Loader2 } from "lucide-react";
+import { Chip, ErrorBox, FormAlert, LoadingRows, notify, Skeleton } from "@/components/hsv/ui";
+import { useAuth } from "@/contexts/auth-context";
 import { useApi } from "@/hooks/use-api";
+import { toApiError } from "@/lib/api/http";
 import { statisticApi } from "@/lib/api/services";
+import { exportBusinessReport } from "@/lib/hsv/export-report";
 import { RevenueGroupBy } from "@/lib/api/types";
 import { formatShortVND, formatVND, toDateParam } from "@/lib/hsv/format";
 import { mockRevenue, mockTopProducts } from "@/lib/hsv/mock-cost";
@@ -46,6 +50,7 @@ function buildRanges(now: Date) {
 }
 
 export default function AdminStatistics() {
+  const { session } = useAuth();
   const [ranges] = useState(() => buildRanges(new Date()));
   const [key, setKey] = useState("6m");
   const [hover, setHover] = useState<number | null>(null);
@@ -63,6 +68,19 @@ export default function AdminStatistics() {
 
   const r = revenue.data?.data;
   const topItems = top.data?.data;
+
+  const [exporting, setExporting] = useState(false);
+  const onExport = async () => {
+    setExporting(true);
+    try {
+      await exportBusinessReport(range, session?.name ?? "Quản trị viên");
+      notify("Đã xuất báo cáo Excel");
+    } catch (e) {
+      notify(`Không xuất được báo cáo: ${toApiError(e).message}`);
+    } finally {
+      setExporting(false);
+    }
+  };
   // items chỉ có kỳ phát sinh doanh thu → tự điền 0 cho tháng trống.
   const byMonth = new Map((r?.items ?? []).map((p) => [p.period.slice(0, 7), p]));
   const buckets = range.months.map(({ y, m }) => {
@@ -82,6 +100,15 @@ export default function AdminStatistics() {
             {x.label}
           </Chip>
         ))}
+        <button
+          type="button"
+          onClick={onExport}
+          disabled={exporting || !r}
+          className="ml-auto inline-flex h-10 items-center gap-2 rounded-lg bg-[#1d6f42] px-4 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#185c37] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
+          {exporting ? "Đang xuất…" : "Xuất Excel"}
+        </button>
       </div>
 
       {revenue.error && !r ? (
