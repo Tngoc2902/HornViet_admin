@@ -24,8 +24,6 @@ Backend phải đang chạy và có `http://localhost:3001` trong `App:CorsOrigi
 | Đường dẫn | Màn hình | Quyền |
 | --- | --- | --- |
 | `/login` | Đăng nhập qua `POST /api/TokenAuth/AuthenticateAdmin` (server chỉ cấp token cho Nhân viên / Quản trị viên) | Công khai |
-| `/forgot-password` | Quên mật khẩu: nhập email, backend gửi link đặt lại (hiệu lực 30 phút, dùng một lần) | Công khai |
-| `/reset-password?token=` | Đặt mật khẩu mới từ link trong email | Công khai |
 | `/` | Tổng quan | Nhân viên, Quản trị viên |
 | `/categories` | Danh mục | Nhân viên, Quản trị viên |
 | `/materials` | Nguyên liệu & nguồn gốc | Nhân viên, Quản trị viên |
@@ -51,7 +49,8 @@ lib/hsv              Định dạng tiền/ngày, trạng thái đơn, kiểm tr
 `lib/api` và `lib/hsv` được sao từ repo cửa hàng; khi backend đổi API cần cập nhật ở cả hai repo.
 Riêng `lib/api/services.ts` của trang quản trị khác bản cửa hàng ở hai chỗ: `authApi.authenticate` gọi
 `/api/TokenAuth/AuthenticateAdmin` và `userApi.resetPassword` (`PUT /api/services/app/User/ResetPassword`).
-`components/hsv/password-reset-forms.tsx` (form Quên / Đặt lại mật khẩu) giống hệt bản bên repo cửa hàng.
+Trang quản trị không có chức năng tự quên mật khẩu (chỉ trang cửa hàng có, bằng mã xác nhận qua email): Nhân viên quên mật khẩu thì
+Quản trị viên đặt lại ở trang Người dùng; tài khoản Quản trị viên và Nhân viên cũng không nhận được mã đặt lại từ backend.
 `lib/hsv/mock-cost.ts` chỉ có ở trang quản trị: khi chạy dev mà backend chưa có chức năng nhập kho (không trả giá vốn / lợi nhuận,
 API `StockReceipt` trả 404), Tổng quan, Thống kê và Nhập kho hiện **dữ liệu ảo**. Trang Nhập kho vẫn nhập / sửa / hủy phiếu được:
 phiếu ảo chỉ lưu trong trình duyệt (localStorage `hsv-mock-stock-receipts`), giá vốn bình quân tính lại như backend, không ghi vào database.

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { ShieldCheck } from "lucide-react";
@@ -114,10 +113,8 @@ function AdminLoginForm() {
             </button>
           </div>
 
-          <p className="mt-5 text-center text-[13px]">
-            <Link href="/forgot-password" className="font-semibold text-gold">
-              Quên mật khẩu?
-            </Link>
+          <p className="mt-5 text-center text-[13px] text-subtle">
+            Quên mật khẩu? Liên hệ Quản trị viên để được đặt lại.
           </p>
         </form>
 
