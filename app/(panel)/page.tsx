@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ErrorBox, LoadingRows, Skeleton, StatusBadge } from "@/components/hsv/ui";
 import { useApi } from "@/hooks/use-api";
+import { useRealtimeRefresh } from "@/hooks/use-realtime";
 import { orderApi, statisticApi } from "@/lib/api/services";
 import { OrderStatus } from "@/lib/api/types";
 import { formatDateTime, formatVND, LOW_STOCK_THRESHOLD } from "@/lib/hsv/format";
@@ -21,6 +22,11 @@ function Kpi({ href, label, value, note }: { href: string; label: string; value:
 export default function AdminDashboard() {
   const dash = useApi(() => statisticApi.getDashboard().then(mockDashboard), []);
   const recent = useApi(() => orderApi.getAll({ maxResultCount: 5 }), []);
+  // Đơn mới, đổi trạng thái, tồn kho thay đổi → số liệu và danh sách tự cập nhật.
+  useRealtimeRefresh(["OrderCreated", "OrderStatusChanged", "StockChanged", "ProductChanged"], () => {
+    void dash.reload();
+    void recent.reload();
+  });
   const d = dash.data?.data;
   // monthRevenue = null khi Nhân viên gọi → ẩn ô doanh thu.
   const showRevenue = d ? d.monthRevenue !== null && d.monthRevenue !== undefined : false;

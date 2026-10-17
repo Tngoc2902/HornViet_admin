@@ -5,6 +5,7 @@ import ClientOnly from "@/components/ClientOnly";
 import { ConfirmProvider } from "@/components/hsv/confirm-provider";
 import { AuthProvider } from "@/contexts/auth-context";
 import { CatalogProvider } from "@/contexts/catalog-context";
+import { RealtimeProvider } from "@/contexts/realtime-context";
 import "./globals.css";
 
 const beVietnam = Be_Vietnam_Pro({
@@ -32,22 +33,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Phiên đăng nhập (JWT) lưu ở localStorage nên toàn bộ ứng dụng render phía client. */}
         <ClientOnly>
           <AuthProvider>
-            <CatalogProvider>
-              <ConfirmProvider>
-                {children}
-                <Toaster
-                  position="bottom-center"
-                  duration={2600}
-                  toastOptions={{
-                    unstyled: true,
-                    classNames: {
-                      toast:
-                        "flex items-center whitespace-pre-line rounded-lg bg-[#111] px-[22px] py-[13px] text-sm font-medium text-white shadow-[0_10px_30px_rgba(0,0,0,.25)] font-sans",
-                    },
-                  }}
-                />
-              </ConfirmProvider>
-            </CatalogProvider>
+            <RealtimeProvider>
+              <CatalogProvider>
+                <ConfirmProvider>
+                  {children}
+                  <Toaster
+                    position="bottom-center"
+                    duration={2600}
+                    toastOptions={{
+                      unstyled: true,
+                      classNames: {
+                        toast:
+                          "flex items-center whitespace-pre-line rounded-lg bg-[#111] px-[22px] py-[13px] text-sm font-medium text-white shadow-[0_10px_30px_rgba(0,0,0,.25)] font-sans",
+                      },
+                    }}
+                  />
+                </ConfirmProvider>
+              </CatalogProvider>
+            </RealtimeProvider>
           </AuthProvider>
         </ClientOnly>
       </body>

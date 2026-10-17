@@ -9,6 +9,7 @@ import { toApiError } from "@/lib/api/http";
 import { orderApi } from "@/lib/api/services";
 import { OrderStatus, PaymentMethod, type OrderListItem, type OrderLineSummary, type PagedResult } from "@/lib/api/types";
 import { emitOrdersChanged } from "@/lib/hsv/events";
+import { useRealtime, useRealtimeRefresh } from "@/hooks/use-realtime";
 import { formatDateTime, formatVND, ORDER_STATUS, ORDER_TABS, parseOrderTab, PAYMENT_LABEL } from "@/lib/hsv/format";
 import { cn } from "@/lib/utils";
 
@@ -45,6 +46,10 @@ function OrderDrawer({ id, onClose, onChanged }: { id: number; onClose: () => vo
   const confirm = useConfirm();
   const { data: order, error, reload, setData } = useApi(() => orderApi.get(id), [id]);
   const [busy, setBusy] = useState(false);
+  // Nhân viên khác vừa đổi trạng thái đơn đang mở → tải lại để không thao tác trên dữ liệu cũ.
+  useRealtime("OrderStatusChanged", (e) => {
+    if (e.orderId === id && !busy) void reload();
+  });
 
   const change = async (to: OrderStatus) => {
     if (!order) return;
@@ -204,6 +209,11 @@ export default function AdminOrders() {
   );
 
   const rows = list.data?.items ?? [];
+
+  useRealtimeRefresh(["OrderCreated", "OrderStatusChanged"], () => {
+    void list.reload();
+    void counts.reload();
+  });
 
   const onChanged = () => {
     void list.reload();

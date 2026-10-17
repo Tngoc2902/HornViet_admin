@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Drawer, FieldError, FormAlert, notify } from "@/components/hsv/ui";
+import { SESSION_TOAST_ID } from "@/lib/realtime";
 import { useAuth } from "@/contexts/auth-context";
 import { toApiError } from "@/lib/api/http";
 import { profileApi } from "@/lib/api/services";
@@ -40,7 +41,7 @@ export function ChangePasswordDrawer({ onClose }: { onClose: () => void }) {
       await profileApi.changePassword(form.currentPassword, form.newPassword);
       // Backend thu hồi mọi phiên đăng nhập (kể cả phiên này) khi đổi mật khẩu → đăng nhập lại.
       logout();
-      notify("Đã đổi mật khẩu. Vui lòng đăng nhập lại bằng mật khẩu mới.");
+      notify("Đã đổi mật khẩu. Vui lòng đăng nhập lại bằng mật khẩu mới.", SESSION_TOAST_ID);
       router.push("/login");
     } catch (err) {
       const api = toApiError(err);

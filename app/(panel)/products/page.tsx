@@ -7,6 +7,7 @@ import { ProductFormDrawer } from "@/components/hsv/product-form-drawer";
 import { Chip, ErrorBox, LoadingRows, notify, Pager, ProductImage } from "@/components/hsv/ui";
 import { useCatalog } from "@/contexts/catalog-context";
 import { useApi, useDebounced } from "@/hooks/use-api";
+import { useRealtimeRefresh } from "@/hooks/use-realtime";
 import { toApiError } from "@/lib/api/http";
 import { productApi } from "@/lib/api/services";
 import type { ProductAdminListItem } from "@/lib/api/types";
@@ -58,6 +59,7 @@ export default function AdminProducts() {
       }),
     [keyword, cat, status, lowOnly, page]
   );
+  useRealtimeRefresh(["StockChanged", "ProductChanged"], () => list.reload());
   const rows = list.data?.items ?? [];
 
   const filter = (fn: () => void) => {
