@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useConfirm } from "@/components/hsv/confirm-provider";
 import { Chip, Drawer, ErrorBox, FieldError, FormAlert, LoadingRows, notify, Pager } from "@/components/hsv/ui";
 import { useApi, useDebounced } from "@/hooks/use-api";
+import { useRealtimeRefresh } from "@/hooks/use-realtime";
 import { toApiError } from "@/lib/api/http";
 import type { StockReceipt, VariantCost } from "@/lib/api/types";
 import { formatDateTime, formatVND } from "@/lib/hsv/format";
@@ -384,6 +385,7 @@ export default function AdminInventory() {
   // Tăng sau mỗi lần nhập / sửa / hủy để cả hai tab tải lại dữ liệu.
   const [version, setVersion] = useState(0);
   const bump = () => setVersion((v) => v + 1);
+  useRealtimeRefresh(["StockChanged", "ProductChanged"], bump);
 
   return (
     <div>

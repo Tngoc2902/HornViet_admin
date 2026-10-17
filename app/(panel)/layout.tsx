@@ -11,6 +11,7 @@ import { useApi } from "@/hooks/use-api";
 import { STORE_URL } from "@/lib/api/http";
 import { statisticApi } from "@/lib/api/services";
 import { ORDERS_CHANGED } from "@/lib/hsv/events";
+import { useRealtimeStatus } from "@/contexts/realtime-context";
 import { roleLabel } from "@/lib/hsv/format";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +30,7 @@ const ADMIN_NAV = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { session, isAdmin, logout } = useAuth();
+  const realtime = useRealtimeStatus();
   const router = useRouter();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -104,6 +106,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="mt-auto border-t border-line px-2.5 pt-4">
         <p className="text-[13.5px] font-semibold">{session.name}</p>
         <p className="mt-0.5 text-xs font-semibold text-gold">{roleLabel(session.roles)}</p>
+        <p className="mt-1.5 flex items-center gap-1.5 text-[11.5px] text-subtle" title="Đơn mới, trạng thái đơn và tồn kho được cập nhật tức thì">
+          <span className={cn("h-2 w-2 rounded-full", realtime === "connected" ? "bg-[#2e9e5b]" : realtime === "connecting" ? "bg-gold" : "bg-[#b9b2a8]")} />
+          {realtime === "connected" ? "Cập nhật trực tiếp" : realtime === "connecting" ? "Đang kết nối…" : "Mất kết nối trực tiếp"}
+        </p>
         <div className="mt-3 flex flex-wrap gap-x-3.5 gap-y-1.5">
           {STORE_URL && (
             <a href={STORE_URL} target="_blank" rel="noreferrer" className="text-[12.5px] font-semibold text-ink-2">
