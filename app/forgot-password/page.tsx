@@ -19,7 +19,7 @@ export default function AdminForgotPasswordPage() {
             <h1 className="text-[19px] font-bold uppercase tracking-[0.05em]">Quên mật khẩu</h1>
           </div>
           <p className="mt-2 text-[13.5px] text-muted2">
-            Nhập email của tài khoản Nhân viên / Quản trị viên, chúng tôi sẽ gửi liên kết để đặt mật khẩu mới.
+            Nhập email của tài khoản Nhân viên / Quản trị viên, chúng tôi sẽ gửi mã xác nhận để đặt mật khẩu mới.
           </p>
           <div className="mt-6">
             <ForgotPasswordForm />

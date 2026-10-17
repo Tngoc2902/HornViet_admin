@@ -46,9 +46,12 @@ export const authApi = {
   authenticate: (userNameOrEmailAddress: string, password: string) =>
     http.post<AuthenticateResult>("/api/TokenAuth/AuthenticateAdmin", { userNameOrEmailAddress, password }),
   register: (input: RegisterInput) => http.post<{ userId: number; userName: string }>(app("Account/Register"), input),
-  /** Gửi email chứa link đặt lại mật khẩu; luôn thành công dù email có tồn tại hay không. */
+  /** Gửi email chứa mã xác nhận 6 số (hiệu lực 60 giây); luôn thành công dù email có tồn tại hay không. */
   forgotPassword: (emailAddress: string) => http.post<null>(app("Account/ForgotPassword"), { emailAddress }),
-  /** Đặt mật khẩu mới bằng mã trong link email (?token=...). */
+  /** Kiểm tra mã xác nhận (tối đa 5 lần sai); đúng thì nhận "vé" dùng một lần để đặt mật khẩu mới. */
+  verifyResetCode: (emailAddress: string, code: string) =>
+    http.post<{ resetToken: string }>(app("Account/VerifyResetCode"), { emailAddress, code }),
+  /** Đặt mật khẩu mới bằng vé nhận được từ verifyResetCode. */
   resetPassword: (token: string, newPassword: string) => http.post<null>(app("Account/ResetPassword"), { token, newPassword }),
 };
 
