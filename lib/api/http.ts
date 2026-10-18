@@ -2,6 +2,8 @@
 // Mọi response có vỏ { result, success, error, unauthorizedRequest }: hàm request()
 // trả thẳng `result`, lỗi được chuẩn hóa thành ApiError để UI hiển thị nguyên văn.
 
+import { isAuthItemPersistent, loadAuthItem, removeAuthItem, saveAuthItem } from "@/lib/storage";
+
 export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/+$/, "");
 
 /** Địa chỉ trang cửa hàng. Mặc định localhost chỉ áp dụng khi chạy dev, tránh deploy quên cấu hình mà vẫn trỏ về localhost. */
@@ -59,27 +61,19 @@ export function toApiError(e: unknown): ApiError {
 
 export const tokenStore = {
   get(): string | null {
-    try {
-      return window.localStorage.getItem(TOKEN_KEY);
-    } catch {
-      return null;
-    }
+    return loadAuthItem(TOKEN_KEY);
   },
-  set(token: string) {
-    try {
-      window.localStorage.setItem(TOKEN_KEY, token);
-    } catch {
-      // bỏ qua: trình duyệt chặn storage thì phiên chỉ sống trong bộ nhớ
-    }
+  /** persistent = true: giữ đăng nhập sau khi đóng trình duyệt; false: đóng tab là đăng xuất. */
+  set(token: string, persistent = false) {
+    saveAuthItem(TOKEN_KEY, token, persistent);
     memoryToken = token;
+  },
+  isPersistent(): boolean {
+    return isAuthItemPersistent(TOKEN_KEY);
   },
   clear() {
     memoryToken = null;
-    try {
-      window.localStorage.removeItem(TOKEN_KEY);
-    } catch {
-      // bỏ qua
-    }
+    removeAuthItem(TOKEN_KEY);
   },
 };
 
