@@ -7,7 +7,7 @@ import { Chip, Drawer, ErrorBox, LoadingRows, notify, OrderProgress, Pager, Stat
 import { useApi, useDebounced } from "@/hooks/use-api";
 import { toApiError } from "@/lib/api/http";
 import { orderApi, shipmentApi, shippingApi } from "@/lib/api/services";
-import { SHIPMENT_STATUS, shipmentLabel, SIMULATE_STEPS, TONE_STYLE } from "@/lib/hsv/shipping";
+import { isShipmentStale, SHIPMENT_STATUS, shipmentLabel, SIMULATE_STEPS, TONE_STYLE } from "@/lib/hsv/shipping";
 import { OrderStatus, PaymentMethod, type OrderListItem, type OrderLineSummary, type PagedResult } from "@/lib/api/types";
 import { emitOrdersChanged } from "@/lib/hsv/events";
 import { useRealtime, useRealtimeRefresh } from "@/hooks/use-realtime";
@@ -180,7 +180,7 @@ function OrderDrawer({ id, onClose, onChanged }: { id: number; onClose: () => vo
               <>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-[13.5px] font-semibold">Mã: {order.ghnOrderCode}</span>
-                  {order.ghnStatus && (
+                  {order.ghnStatus && !isShipmentStale(order.status, order.ghnStatus) && (
                     <span
                       className="rounded-full border px-2.5 py-0.5 text-xs font-semibold"
                       style={{
@@ -193,7 +193,14 @@ function OrderDrawer({ id, onClose, onChanged }: { id: number; onClose: () => vo
                     </span>
                   )}
                 </div>
-                {order.ghnStatusTime && <p className="mt-1.5 text-[13px] text-muted2">Cập nhật: {formatDateTime(order.ghnStatusTime)}</p>}
+                {isShipmentStale(order.status, order.ghnStatus) ? (
+                  <p className="mt-1.5 text-[13px] text-warn">
+                    Đơn đã được chuyển trạng thái bằng tay trong khi vận đơn còn &quot;{shipmentLabel(order.ghnStatus)}&quot; — vận đơn không còn được
+                    theo dõi. Kiểm tra / hủy vận đơn trên cổng GHN nếu cần.
+                  </p>
+                ) : (
+                  order.ghnStatusTime && <p className="mt-1.5 text-[13px] text-muted2">Cập nhật: {formatDateTime(order.ghnStatusTime)}</p>
+                )}
                 {order.ghnExpectedDeliveryTime && (
                   <p className="mt-1 text-[13px] text-muted2">Dự kiến giao: {formatDateTime(order.ghnExpectedDeliveryTime)}</p>
                 )}
