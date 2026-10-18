@@ -4,7 +4,7 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, 
 import { ApiError, setUnauthorizedHandler, tokenStore } from "@/lib/api/http";
 import { authApi } from "@/lib/api/services";
 import type { RoleName } from "@/lib/api/types";
-import { loadLocalStorage, removeLocalStorage, saveLocalStorage } from "@/lib/storage";
+import { loadAuthItem, removeAuthItem, removeLocalStorage, saveAuthItem } from "@/lib/storage";
 
 const SESSION_KEY = "hsv-admin-session";
 
@@ -34,11 +34,29 @@ export function isStaffRoles(roles: RoleName[]) {
   return roles.includes("Admin") || roles.includes("Staff");
 }
 
+// Trang quản trị không ghi nhớ đăng nhập: phiên chỉ sống trong tab (sessionStorage), đóng tab / trình duyệt là đăng xuất.
+// Phiên cũ lưu ở localStorage (trước khi đổi) bị xóa luôn để không còn "đăng nhập vĩnh viễn".
+const LEGACY_TOKEN_KEY = "hsv-access-token";
+
+function readSession(): Session | null {
+  try {
+    const raw = loadAuthItem(SESSION_KEY);
+    return raw ? (JSON.parse(raw) as Session) : null;
+  } catch {
+    return null;
+  }
+}
+
 function loadSession(): Session | null {
-  const s = loadLocalStorage<Session | null>(SESSION_KEY, null);
+  if (typeof window === "undefined") return null;
+  if (tokenStore.isPersistent()) {
+    removeLocalStorage(LEGACY_TOKEN_KEY);
+    removeLocalStorage(SESSION_KEY);
+  }
+  const s = readSession();
   if (!s || !tokenStore.get() || s.expiresAt <= Date.now() || !isStaffRoles(s.roles)) {
     tokenStore.clear();
-    removeLocalStorage(SESSION_KEY);
+    removeAuthItem(SESSION_KEY);
     return null;
   }
   return s;
@@ -49,8 +67,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const persist = useCallback((s: Session | null) => {
     setSession(s);
-    if (s) saveLocalStorage(SESSION_KEY, s);
-    else removeLocalStorage(SESSION_KEY);
+    if (s) saveAuthItem(SESSION_KEY, JSON.stringify(s), false);
+    else removeAuthItem(SESSION_KEY);
   }, []);
 
   const logout = useCallback(() => {
@@ -77,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const r = await authApi.authenticate(identifier.trim(), password);
       // Server đã chặn tài khoản Khách hàng; vẫn kiểm tra lại để không bao giờ lưu phiên không phải quản trị.
       if (!isStaffRoles(r.roles ?? [])) throw new ApiError(403, NOT_STAFF_MESSAGE);
-      tokenStore.set(r.accessToken);
+      tokenStore.set(r.accessToken, false);
       const s: Session = {
         userId: r.userId,
         userName: r.userName,
