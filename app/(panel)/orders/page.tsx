@@ -7,7 +7,8 @@ import { Chip, Drawer, ErrorBox, LoadingRows, notify, OrderProgress, Pager, Stat
 import { useApi, useDebounced } from "@/hooks/use-api";
 import { toApiError } from "@/lib/api/http";
 import { orderApi, shipmentApi, shippingApi } from "@/lib/api/services";
-import { isShipmentStale, SHIPMENT_STATUS, shipmentLabel, SIMULATE_STEPS, TONE_STYLE } from "@/lib/hsv/shipping";
+import { isShipmentStale, SHIPMENT_STATUS, shipmentLabel, SIMULATION_NEXT, TONE_STYLE } from "@/lib/hsv/shipping";
+import { ShipmentProgress } from "@/components/hsv/shipment-progress";
 import { OrderStatus, PaymentMethod, type OrderListItem, type OrderLineSummary, type PagedResult } from "@/lib/api/types";
 import { emitOrdersChanged } from "@/lib/hsv/events";
 import { useRealtime, useRealtimeRefresh } from "@/hooks/use-realtime";
@@ -193,6 +194,7 @@ function OrderDrawer({ id, onClose, onChanged }: { id: number; onClose: () => vo
                     </span>
                   )}
                 </div>
+                {!isShipmentStale(order.status, order.ghnStatus) && <ShipmentProgress status={order.ghnStatus} />}
                 {isShipmentStale(order.status, order.ghnStatus) ? (
                   <p className="mt-1.5 text-[13px] text-warn">
                     Đơn đã được chuyển trạng thái bằng tay trong khi vận đơn còn &quot;{shipmentLabel(order.ghnStatus)}&quot; — vận đơn không còn được
@@ -233,19 +235,22 @@ function OrderDrawer({ id, onClose, onChanged }: { id: number; onClose: () => vo
                     </button>
                   )}
                 </div>
-                {isSandbox && shipmentOpen && !shipmentFinal && (
+                {isSandbox && shipmentOpen && !shipmentFinal && (SIMULATION_NEXT[order.ghnStatus ?? ""] ?? []).length > 0 && (
                   <div className="mt-3 rounded-lg border border-dashed border-line px-3 py-2.5">
-                    <p className="text-[12px] font-semibold text-muted2">MÔI TRƯỜNG THỬ GHN — GIẢ LẬP TRẠNG THÁI</p>
-                    <p className="mt-0.5 text-[12px] text-faint">Sandbox không có shipper thật nên vận đơn không tự đổi. Bấm để giả lập như GHN gửi cập nhật.</p>
+                    <p className="text-[12px] font-semibold text-muted2">MÔI TRƯỜNG THỬ GHN — GIẢ LẬP BƯỚC TIẾP THEO</p>
+                    <p className="mt-0.5 text-[12px] text-faint">
+                      Sandbox GHN không có shipper thật: vận đơn trên cổng GHN thử nghiệm luôn đứng ở &quot;Chờ lấy hàng&quot;. Giả lập chỉ đổi
+                      trạng thái trong hệ thống này, đi lần lượt từng bước như vận đơn thật.
+                    </p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {SIMULATE_STEPS.map((st) => (
+                      {(SIMULATION_NEXT[order.ghnStatus ?? ""] ?? []).map((st) => (
                         <button
                           key={st}
                           onClick={() => shipAction(() => shipmentApi.simulate(order.id, st), `Giả lập: ${shipmentLabel(st)}`)}
-                          disabled={busy || order.ghnStatus === st}
-                          className="rounded-md border border-line px-2.5 py-1 text-[12px] font-semibold disabled:opacity-50"
+                          disabled={busy}
+                          className="rounded-md border border-navy px-2.5 py-1 text-[12px] font-semibold text-navy disabled:opacity-50"
                         >
-                          {shipmentLabel(st)}
+                          → {shipmentLabel(st)}
                         </button>
                       ))}
                     </div>
