@@ -38,8 +38,60 @@ export const TONE_STYLE: Record<ShipmentTone, { fg: string; bg: string; bd: stri
   bad: { fg: "#9b3a2e", bg: "#f8e6e2", bd: "#e8c4bd" },
 };
 
-/** Các bước giả lập ở môi trường thử (sandbox GHN không có shipper nên vận đơn không tự đổi trạng thái). */
-export const SIMULATE_STEPS = ["picked", "delivering", "delivered", "delivery_fail", "returned"] as const;
+/**
+ * Bước kế tiếp được phép giả lập ở môi trường thử (sandbox GHN không có shipper nên vận đơn không tự đổi trạng thái).
+ * Khớp ShipmentAppService.SimulationSteps ở backend: đi lần lượt, không nhảy bước.
+ */
+export const SIMULATION_NEXT: Record<string, string[]> = {
+  ready_to_pick: ["picking"],
+  picking: ["picked"],
+  picked: ["transporting"],
+  transporting: ["delivering"],
+  delivering: ["delivered", "delivery_fail"],
+  delivery_fail: ["delivering", "waiting_to_return"],
+  waiting_to_return: ["returning"],
+  returning: ["returned"],
+};
+
+/** Các bước chính của vận đơn, theo đúng thứ tự (giống tiến trình trên cổng GHN). */
+export const SHIPMENT_FLOW = [
+  { key: "ready_to_pick", label: "Chờ lấy hàng" },
+  { key: "picking", label: "Đang lấy hàng" },
+  { key: "picked", label: "Đã lấy hàng" },
+  { key: "transporting", label: "Đang luân chuyển" },
+  { key: "delivering", label: "Đang giao hàng" },
+  { key: "delivered", label: "Giao thành công" },
+] as const;
+
+/** Vị trí của trạng thái GHN trên các bước chính (trạng thái phụ gộp vào bước gần nhất). */
+export function shipmentStepIndex(status: string | null | undefined): number {
+  switch (status) {
+    case "ready_to_pick":
+      return 0;
+    case "picking":
+    case "money_collect_picking":
+      return 1;
+    case "picked":
+      return 2;
+    case "storing":
+    case "sorting":
+    case "transporting":
+      return 3;
+    case "delivering":
+    case "money_collect_delivering":
+    case "delivery_fail":
+      return 4;
+    case "delivered":
+      return 5;
+    default:
+      return -1;
+  }
+}
+
+/** Nhánh hoàn hàng (sau khi giao thất bại). */
+export function isReturnFlow(status: string | null | undefined) {
+  return !!status && ["waiting_to_return", "return", "return_transporting", "return_sorting", "returning", "return_fail", "returned"].includes(status);
+}
 
 /**
  * Đơn đã Hoàn thành / Đã hủy mà vận đơn chưa ở trạng thái cuối: đơn được cập nhật tay trước khi hệ thống chặn việc này,
