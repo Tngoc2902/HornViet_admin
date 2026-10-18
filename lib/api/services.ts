@@ -18,6 +18,7 @@ import type {
   OrderStatus,
   PagedResult,
   PageInput,
+  Shipment,
   ProductAdminListItem,
   ProductAdminQuery,
   ProductDetail,
@@ -107,6 +108,13 @@ export const orderApi = {
   cancel: (id: number) => http.post<Order>(app("Order/Cancel"), { id }),
   getAll: (q: OrderQuery = {}) => http.get<PagedResult<OrderListItem>>(app("Order/GetAll"), q),
   updateStatus: (id: number, status: OrderStatus) => http.put<Order>(app("Order/UpdateStatus"), { id, status }),
+};
+
+export const shipmentApi = {
+  create: (id: number) => http.post<Shipment>(app("Shipment/Create"), { id }),
+  cancel: (id: number) => http.post<Shipment>(app("Shipment/Cancel"), { id }),
+  get: (orderId: number, refresh = false) => http.get<Shipment>(app("Shipment/Get"), { orderId, refresh }),
+  getLabelUrl: (orderId: number) => http.get<string>(app("Shipment/GetLabelUrl"), { orderId }),
 };
 
 export const userApi = {

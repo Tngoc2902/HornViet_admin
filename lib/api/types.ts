@@ -190,6 +190,24 @@ export type Order = Omit<OrderListItem, "items"> & {
   note: string | null;
   lastStatusChangeTime: string | null;
   items: OrderItem[];
+  /** Phí giao hàng; totalAmount là tiền hàng, payableAmount = totalAmount + shippingFee. Backend cũ chưa trả. */
+  shippingFee?: number;
+  payableAmount?: number;
+  ghnOrderCode?: string | null;
+  ghnStatus?: string | null;
+  ghnExpectedDeliveryTime?: string | null;
+  ghnStatusTime?: string | null;
+};
+
+/** Tiến trình giao hàng của một đơn (GET Shipment/Get). */
+export type Shipment = {
+  orderId: number;
+  orderCode: string;
+  trackingCode: string | null;
+  status: string | null;
+  expectedDeliveryTime: string | null;
+  statusTime: string | null;
+  shippingFee: number;
 };
 
 export type OrderQuery = PageInput & { status?: OrderStatus; keyword?: string; fromDate?: string; toDate?: string };
