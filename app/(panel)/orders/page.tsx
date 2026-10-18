@@ -6,8 +6,8 @@ import { useConfirm } from "@/components/hsv/confirm-provider";
 import { Chip, Drawer, ErrorBox, LoadingRows, notify, OrderProgress, Pager, StatusBadge } from "@/components/hsv/ui";
 import { useApi, useDebounced } from "@/hooks/use-api";
 import { toApiError } from "@/lib/api/http";
-import { orderApi, shipmentApi } from "@/lib/api/services";
-import { SHIPMENT_STATUS, shipmentLabel, TONE_STYLE } from "@/lib/hsv/shipping";
+import { orderApi, shipmentApi, shippingApi } from "@/lib/api/services";
+import { SHIPMENT_STATUS, shipmentLabel, SIMULATE_STEPS, TONE_STYLE } from "@/lib/hsv/shipping";
 import { OrderStatus, PaymentMethod, type OrderListItem, type OrderLineSummary, type PagedResult } from "@/lib/api/types";
 import { emitOrdersChanged } from "@/lib/hsv/events";
 import { useRealtime, useRealtimeRefresh } from "@/hooks/use-realtime";
@@ -46,6 +46,8 @@ const NEXT: Partial<Record<OrderStatus, { to: OrderStatus; label: string }>> = {
 function OrderDrawer({ id, onClose, onChanged }: { id: number; onClose: () => void; onChanged: () => void }) {
   const confirm = useConfirm();
   const { data: order, error, reload, setData } = useApi(() => orderApi.get(id), [id]);
+  const shippingStatus = useApi(() => shippingApi.getStatus(), []);
+  const isSandbox = shippingStatus.data?.isSandbox === true;
   const [busy, setBusy] = useState(false);
   // Nhân viên khác vừa đổi trạng thái đơn đang mở → tải lại để không thao tác trên dữ liệu cũ.
   useRealtime("OrderStatusChanged", (e) => {
@@ -102,7 +104,10 @@ function OrderDrawer({ id, onClose, onChanged }: { id: number; onClose: () => vo
     }
   };
 
-  const next = order ? NEXT[order.status] : undefined;
+  // Đơn đã có vận đơn: trạng thái chạy theo GHN (webhook / làm mới), nhân viên không tự bấm Giao hàng / Hoàn thành.
+  const next = order && !order.ghnOrderCode ? NEXT[order.status] : undefined;
+  const shipmentOpen = order && (order.status === OrderStatus.Pending || order.status === OrderStatus.Shipping);
+  const shipmentFinal = order?.ghnStatus === "delivered" || order?.ghnStatus === "returned";
   const canCancel = order && (order.status === OrderStatus.Pending || order.status === OrderStatus.Shipping);
 
   return (
@@ -203,7 +208,7 @@ function OrderDrawer({ id, onClose, onChanged }: { id: number; onClose: () => vo
                   >
                     Làm mới
                   </button>
-                  {order.ghnStatus === "ready_to_pick" && (
+                  {order.ghnStatus === "ready_to_pick" && shipmentOpen && (
                     <button
                       onClick={async () => {
                         const ok = await confirm({
@@ -221,6 +226,24 @@ function OrderDrawer({ id, onClose, onChanged }: { id: number; onClose: () => vo
                     </button>
                   )}
                 </div>
+                {isSandbox && shipmentOpen && !shipmentFinal && (
+                  <div className="mt-3 rounded-lg border border-dashed border-line px-3 py-2.5">
+                    <p className="text-[12px] font-semibold text-muted2">MÔI TRƯỜNG THỬ GHN — GIẢ LẬP TRẠNG THÁI</p>
+                    <p className="mt-0.5 text-[12px] text-faint">Sandbox không có shipper thật nên vận đơn không tự đổi. Bấm để giả lập như GHN gửi cập nhật.</p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {SIMULATE_STEPS.map((st) => (
+                        <button
+                          key={st}
+                          onClick={() => shipAction(() => shipmentApi.simulate(order.id, st), `Giả lập: ${shipmentLabel(st)}`)}
+                          disabled={busy || order.ghnStatus === st}
+                          className="rounded-md border border-line px-2.5 py-1 text-[12px] font-semibold disabled:opacity-50"
+                        >
+                          {shipmentLabel(st)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             ) : order.status === OrderStatus.Pending || order.status === OrderStatus.Shipping ? (
               <>
@@ -264,7 +287,9 @@ function OrderDrawer({ id, onClose, onChanged }: { id: number; onClose: () => vo
             </div>
           </div>
           <p className="text-[12.5px] text-faint">
-            Trạng thái chỉ chuyển theo thứ tự Chờ xử lý → Đang giao → Hoàn thành; hủy được khi đơn đang Chờ xử lý hoặc Đang giao và tồn kho được hoàn lại.
+            {order.ghnOrderCode
+              ? "Đơn có vận đơn Giao Hàng Nhanh: trạng thái tự cập nhật (GHN lấy hàng → Đang giao, giao thành công → Hoàn thành, hoàn hàng → Đã hủy). Hủy đơn sẽ hủy luôn vận đơn."
+              : "Trạng thái chỉ chuyển theo thứ tự Chờ xử lý → Đang giao → Hoàn thành; hủy được khi đơn đang Chờ xử lý hoặc Đang giao và tồn kho được hoàn lại."}
           </p>
         </div>
       )}

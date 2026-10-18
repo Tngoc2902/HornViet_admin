@@ -37,3 +37,6 @@ export const TONE_STYLE: Record<ShipmentTone, { fg: string; bg: string; bd: stri
   warn: { fg: "#8a5a12", bg: "#fbf1dc", bd: "#ecd29a" },
   bad: { fg: "#9b3a2e", bg: "#f8e6e2", bd: "#e8c4bd" },
 };
+
+/** Các bước giả lập ở môi trường thử (sandbox GHN không có shipper nên vận đơn không tự đổi trạng thái). */
+export const SIMULATE_STEPS = ["picked", "delivering", "delivered", "delivery_fail", "returned"] as const;
