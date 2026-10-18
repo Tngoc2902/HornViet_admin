@@ -115,6 +115,12 @@ export const shipmentApi = {
   cancel: (id: number) => http.post<Shipment>(app("Shipment/Cancel"), { id }),
   get: (orderId: number, refresh = false) => http.get<Shipment>(app("Shipment/Get"), { orderId, refresh }),
   getLabelUrl: (orderId: number) => http.get<string>(app("Shipment/GetLabelUrl"), { orderId }),
+  /** Chỉ môi trường thử GHN: giả lập vận đơn đổi trạng thái. */
+  simulate: (orderId: number, status: string) => http.post<Shipment>(app("Shipment/Simulate"), { orderId, status }),
+};
+
+export const shippingApi = {
+  getStatus: () => http.get<{ isEnabled: boolean; isSandbox?: boolean }>(app("Shipping/GetStatus")),
 };
 
 export const userApi = {
