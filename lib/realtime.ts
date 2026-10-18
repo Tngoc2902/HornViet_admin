@@ -13,6 +13,7 @@ export type RealtimeEvents = {
   StockChanged: { productId: number; variants: { variantId: number; stockQuantity: number }[] };
   LowStock: { productId: number; productName: string; variantId: number; variantName: string; stockQuantity: number };
   ProductChanged: { productId: number };
+  ShipmentChanged: { orderId: number; code: string; ghnStatus: string | null };
   SessionRevoked: { reason: "locked" | "rolesChanged" | "passwordReset" | "passwordChanged" };
 };
 export type RealtimeEventName = keyof RealtimeEvents;
@@ -23,6 +24,7 @@ export const REALTIME_EVENT_NAMES: RealtimeEventName[] = [
   "StockChanged",
   "LowStock",
   "ProductChanged",
+  "ShipmentChanged",
   "SessionRevoked",
 ];
 

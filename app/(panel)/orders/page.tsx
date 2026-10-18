@@ -6,7 +6,8 @@ import { useConfirm } from "@/components/hsv/confirm-provider";
 import { Chip, Drawer, ErrorBox, LoadingRows, notify, OrderProgress, Pager, StatusBadge } from "@/components/hsv/ui";
 import { useApi, useDebounced } from "@/hooks/use-api";
 import { toApiError } from "@/lib/api/http";
-import { orderApi } from "@/lib/api/services";
+import { orderApi, shipmentApi } from "@/lib/api/services";
+import { SHIPMENT_STATUS, shipmentLabel, TONE_STYLE } from "@/lib/hsv/shipping";
 import { OrderStatus, PaymentMethod, type OrderListItem, type OrderLineSummary, type PagedResult } from "@/lib/api/types";
 import { emitOrdersChanged } from "@/lib/hsv/events";
 import { useRealtime, useRealtimeRefresh } from "@/hooks/use-realtime";
@@ -50,6 +51,31 @@ function OrderDrawer({ id, onClose, onChanged }: { id: number; onClose: () => vo
   useRealtime("OrderStatusChanged", (e) => {
     if (e.orderId === id && !busy) void reload();
   });
+  useRealtime("ShipmentChanged", (e) => {
+    if (e.orderId === id && !busy) void reload();
+  });
+
+  // Thao tác vận đơn (tạo / hủy / làm mới): xong thì tải lại đơn vì tạo vận đơn còn đổi trạng thái đơn.
+  const shipAction = async (run: () => Promise<unknown>, okMessage: string) => {
+    setBusy(true);
+    try {
+      await run();
+      notify(okMessage);
+      await reload();
+      onChanged();
+    } catch (e) {
+      notify(toApiError(e).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const printLabel = async () => {
+    try {
+      window.open(await shipmentApi.getLabelUrl(id), "_blank", "noopener");
+    } catch (e) {
+      notify(toApiError(e).message);
+    }
+  };
 
   const change = async (to: OrderStatus) => {
     if (!order) return;
@@ -144,6 +170,76 @@ function OrderDrawer({ id, onClose, onChanged }: { id: number; onClose: () => vo
             )}
           </div>
           <div className="hsv-card p-4">
+            <p className="mb-2.5 text-xs font-bold text-muted2">VẬN ĐƠN GIAO HÀNG NHANH</p>
+            {order.ghnOrderCode ? (
+              <>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[13.5px] font-semibold">Mã: {order.ghnOrderCode}</span>
+                  {order.ghnStatus && (
+                    <span
+                      className="rounded-full border px-2.5 py-0.5 text-xs font-semibold"
+                      style={{
+                        color: TONE_STYLE[SHIPMENT_STATUS[order.ghnStatus]?.tone ?? "info"].fg,
+                        background: TONE_STYLE[SHIPMENT_STATUS[order.ghnStatus]?.tone ?? "info"].bg,
+                        borderColor: TONE_STYLE[SHIPMENT_STATUS[order.ghnStatus]?.tone ?? "info"].bd,
+                      }}
+                    >
+                      {shipmentLabel(order.ghnStatus)}
+                    </span>
+                  )}
+                </div>
+                {order.ghnStatusTime && <p className="mt-1.5 text-[13px] text-muted2">Cập nhật: {formatDateTime(order.ghnStatusTime)}</p>}
+                {order.ghnExpectedDeliveryTime && (
+                  <p className="mt-1 text-[13px] text-muted2">Dự kiến giao: {formatDateTime(order.ghnExpectedDeliveryTime)}</p>
+                )}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button onClick={printLabel} className="rounded-lg border border-line px-3.5 py-2 text-[13px] font-semibold">
+                    In phiếu gửi
+                  </button>
+                  <button
+                    onClick={() => shipAction(() => shipmentApi.get(order.id, true), "Đã làm mới tình trạng giao hàng")}
+                    disabled={busy}
+                    className="rounded-lg border border-line px-3.5 py-2 text-[13px] font-semibold disabled:opacity-60"
+                  >
+                    Làm mới
+                  </button>
+                  {order.ghnStatus === "ready_to_pick" && (
+                    <button
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: "Hủy vận đơn?",
+                          body: "Vận đơn sẽ bị hủy trên Giao Hàng Nhanh; bạn có thể tạo lại vận đơn mới.",
+                          okLabel: "Hủy vận đơn",
+                          danger: true,
+                        });
+                        if (ok) await shipAction(() => shipmentApi.cancel(order.id), "Đã hủy vận đơn");
+                      }}
+                      disabled={busy}
+                      className="rounded-lg border border-[#e8c4bd] px-3.5 py-2 text-[13px] font-semibold text-danger disabled:opacity-60"
+                    >
+                      Hủy vận đơn
+                    </button>
+                  )}
+                </div>
+              </>
+            ) : order.status === OrderStatus.Pending || order.status === OrderStatus.Shipping ? (
+              <>
+                <p className="text-[13px] text-muted2">
+                  Chưa có vận đơn. Tạo vận đơn sẽ gửi đơn sang Giao Hàng Nhanh và chuyển đơn sang Đang giao.
+                </p>
+                <button
+                  onClick={() => shipAction(() => shipmentApi.create(order.id), "Đã tạo vận đơn")}
+                  disabled={busy}
+                  className="mt-3 rounded-lg bg-navy px-3.5 py-2 text-[13px] font-semibold text-white disabled:opacity-60"
+                >
+                  {busy ? "Đang xử lý…" : "Tạo vận đơn"}
+                </button>
+              </>
+            ) : (
+              <p className="text-[13px] text-muted2">Không có vận đơn.</p>
+            )}
+          </div>
+          <div className="hsv-card p-4">
             <p className="mb-1.5 text-xs font-bold text-muted2">SẢN PHẨM ({order.itemCount})</p>
             {order.items.map((i) => (
               <div key={i.id} className="flex items-center gap-3 border-t border-line-2 py-2.5">
@@ -156,9 +252,15 @@ function OrderDrawer({ id, onClose, onChanged }: { id: number; onClose: () => vo
                 <span className="text-[13.5px] font-semibold">{formatVND(i.lineTotal)}</span>
               </div>
             ))}
+            {!!order.shippingFee && (
+              <div className="flex items-center justify-between pt-2 text-[13px] text-muted2">
+                <span>Phí giao hàng</span>
+                <span>{formatVND(order.shippingFee)}</span>
+              </div>
+            )}
             <div className="mt-0.5 flex items-center justify-between border-t border-line-2 pt-2.5 text-[13px] text-muted2">
               <span>Tổng thanh toán</span>
-              <span className="text-base font-bold text-navy">{formatVND(order.totalAmount)}</span>
+              <span className="text-base font-bold text-navy">{formatVND(order.payableAmount ?? order.totalAmount)}</span>
             </div>
           </div>
           <p className="text-[12.5px] text-faint">
