@@ -303,3 +303,35 @@ export type VariantCost = {
 
 export type StockReceiptInput = { productVariantId: number; quantity: number; unitCost: number; note?: string };
 export type StockReceiptUpdateInput = { id: number; quantity: number; unitCost: number; note?: string };
+
+// ---------- Bộ sưu tập
+export type CollectionProduct = { id: number; name: string; mainImage: string; price: number; isActive: boolean };
+export type Collection = {
+  id: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  coverImage: string | null;
+  isActive: boolean;
+  displayOrder: number;
+  /** Số sản phẩm trong bộ (trang quản trị: kể cả sản phẩm đang ẩn). */
+  productCount: number;
+  /** Ảnh vài sản phẩm đầu — ảnh bìa dự phòng. */
+  previewImages: string[];
+  /** Chỉ có khi xem chi tiết (Collection/Get). */
+  productIds?: number[] | null;
+  products?: CollectionProduct[] | null;
+  creationTime: string;
+};
+export type CollectionInput = {
+  id?: number;
+  name: string;
+  /** Để trống thì máy chủ tạo từ tên. */
+  slug?: string | null;
+  description?: string | null;
+  coverImage?: string | null;
+  isActive: boolean;
+  displayOrder: number;
+  /** Theo thứ tự hiển thị trong bộ. */
+  productIds: number[];
+};
