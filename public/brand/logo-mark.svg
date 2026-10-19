@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Hồn Sừng Việt">
+  <defs>
+    <linearGradient id="hsv-horn" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f7ecd3"/>
+      <stop offset="1" stop-color="#cfae76"/>
+    </linearGradient>
+    <linearGradient id="hsv-flame" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#dcba80"/>
+      <stop offset="1" stop-color="#a27b44"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="#0f2a4a"/>
+  <rect x="2.75" y="2.75" width="58.5" height="58.5" rx="12.5" fill="none" stroke="#e7d3a8" stroke-opacity=".28" stroke-width=".9"/>
+  <!-- Đôi sừng trâu liền một nét: xoè ngang, ngọn vút lên và cong vào trong; khấc nhỏ ở đáy là chỗ hai sừng gặp nhau -->
+  <path fill="url(#hsv-horn)" d="M16 12.2C10.4 16.8 8.7 25 10.4 31.8 12.6 40 20.6 45.6 30.4 46L32 44.6 33.6 46C43.4 45.6 51.4 40 53.6 31.8 55.3 25 53.6 16.8 48 12.2 50.4 18 50.6 24.6 48.2 29.8 45.2 36 39.4 40 32 40.6 24.6 40 18.8 36 15.8 29.8 13.4 24.6 13.6 18 16 12.2Z"/>
+  <!-- Ngọn lửa "hồn" -->
+  <path fill="url(#hsv-flame)" d="M32 11C35 16 36.6 21.5 36.6 26.5 36.6 31.3 34.6 34.8 32 37 29.4 34.8 27.4 31.3 27.4 26.5 27.4 21.5 29 16 32 11Z"/>
+  <path fill="#f6e3b8" fill-opacity=".55" d="M32 19.5C33.4 22.3 34.1 24.9 34.1 27.3 34.1 29.8 33.3 31.7 32 33 30.7 31.7 29.9 29.8 29.9 27.3 29.9 24.9 30.6 22.3 32 19.5Z"/>
+  <!-- Viên đá trang sức -->
+  <path fill="#e7d3a8" d="M32 48.6 34.5 51.1 32 53.6 29.5 51.1Z"/>
+</svg>

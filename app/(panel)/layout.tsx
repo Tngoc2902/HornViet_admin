@@ -74,7 +74,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const sidebar = (
     <aside className="flex h-full flex-col border-r border-line bg-surface-2 px-3.5 py-[22px]">
       <Link href="/" className="flex items-center gap-2.5 px-2.5 pb-[22px]">
-        <span className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-navy font-serif text-[15px] text-white">H</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/logo-mark.svg" alt="" width={36} height={36} className="h-[36px] w-[36px] shrink-0" />
         <div className="leading-tight">
           <p className="font-serif text-[17px]">Hồn Sừng Việt</p>
           <p className="mt-0.5 text-[11px] text-subtle">Trang quản trị</p>
