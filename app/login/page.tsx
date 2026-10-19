@@ -59,7 +59,8 @@ function AdminLoginForm() {
     <div className="flex min-h-screen items-center justify-center bg-surface-2 px-4 py-12">
       <div className="w-full max-w-[420px] animate-hin">
         <div className="mb-6 flex items-center justify-center gap-3">
-          <span className="flex h-[42px] w-[42px] items-center justify-center rounded-full bg-navy font-serif text-lg text-white">H</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/logo-mark.svg" alt="" width={44} height={44} className="h-[44px] w-[44px] shrink-0" />
           <div className="leading-tight">
             <p className="font-serif text-xl">Hồn Sừng Việt</p>
             <p className="mt-0.5 text-xs text-subtle">Trang quản trị</p>
