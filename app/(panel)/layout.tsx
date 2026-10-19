@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { BarChart3, FolderTree, Gem, LayoutGrid, Menu, Package, ShoppingCart, Users, Warehouse, X } from "lucide-react";
+import { BarChart3, FolderTree, Gem, Layers, LayoutGrid, Menu, Package, ShoppingCart, Users, Warehouse, X } from "lucide-react";
 import { ChangePasswordDrawer } from "@/components/hsv/change-password-drawer";
 import { notify } from "@/components/hsv/ui";
 import { useAuth } from "@/contexts/auth-context";
@@ -22,6 +22,7 @@ const ADMIN_NAV = [
   { href: "/categories", label: "Danh mục", title: "Quản lý danh mục", icon: FolderTree, adminOnly: false },
   { href: "/materials", label: "Nguyên liệu", title: "Nguyên liệu & nguồn gốc", icon: Gem, adminOnly: false },
   { href: "/products", label: "Sản phẩm", title: "Sản phẩm", icon: Package, adminOnly: false },
+  { href: "/collections", label: "Bộ sưu tập", title: "Bộ sưu tập", icon: Layers, adminOnly: false },
   { href: "/orders", label: "Đơn hàng", title: "Quản lý đơn hàng", icon: ShoppingCart, adminOnly: false },
   { href: "/inventory", label: "Nhập kho", title: "Nhập kho & giá vốn", icon: Warehouse, adminOnly: true },
   { href: "/users", label: "Người dùng", title: "Quản lý người dùng", icon: Users, adminOnly: true },
