@@ -83,6 +83,8 @@ export type ProductVariant = {
   size: string | null;
   style: string | null;
   displayName: string;
+  /** Ảnh hiện khi khách chọn biến thể; null = ảnh đại diện. Backend cũ chưa trả. */
+  imageUrl?: string | null;
   stockQuantity: number;
   inStock: boolean;
   isLowStock: boolean;
@@ -129,7 +131,7 @@ export type ProductInput = {
   mainImage: string;
   description?: string | null;
   isActive: boolean;
-  variants: { id?: number; size?: string | null; style?: string | null; stockQuantity: number }[];
+  variants: { id?: number; size?: string | null; style?: string | null; imageUrl?: string | null; stockQuantity: number }[];
   images: string[];
 };
 
