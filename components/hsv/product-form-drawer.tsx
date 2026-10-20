@@ -12,10 +12,13 @@ import { LOW_STOCK_THRESHOLD } from "@/lib/hsv/format";
 import { cn } from "@/lib/utils";
 
 const MAX_IMAGES = 6;
+/** Trùng AppConsts.MinProductImages: sản phẩm mới cần tối thiểu 3 ảnh (gồm ảnh đại diện). */
+const MIN_IMAGES_NEW = 3;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const ACCEPT = ["image/jpeg", "image/png", "image/webp"];
 
-type VariantRow = { key: number; id?: number; size: string; style: string; stock: string };
+/** image: ảnh của biến thể (một trong f.images); "" = dùng ảnh đại diện. */
+type VariantRow = { key: number; id?: number; size: string; style: string; stock: string; image: string };
 type FormState = {
   id?: number;
   name: string;
@@ -31,7 +34,7 @@ type FormState = {
 type ErrKey = "name" | "categoryId" | "materialId" | "price" | "mainImage" | "variants";
 
 let rowKey = 1;
-const blankRow = (): VariantRow => ({ key: rowKey++, size: "", style: "", stock: "" });
+const blankRow = (): VariantRow => ({ key: rowKey++, size: "", style: "", stock: "", image: "" });
 
 function toForm(p: ProductDetail | null): FormState {
   if (!p) return { name: "", categoryId: null, materialId: null, price: "", description: "", isActive: true, images: [], variants: [blankRow()] };
@@ -44,7 +47,14 @@ function toForm(p: ProductDetail | null): FormState {
     description: p.description ?? "",
     isActive: p.isActive,
     images: [p.mainImage, ...(p.images ?? [])].filter((x, i, a): x is string => !!x && a.indexOf(x) === i),
-    variants: (p.variants ?? []).map((v) => ({ key: rowKey++, id: v.id, size: v.size ?? "", style: v.style ?? "", stock: String(v.stockQuantity) })),
+    variants: (p.variants ?? []).map((v) => ({
+      key: rowKey++,
+      id: v.id,
+      size: v.size ?? "",
+      style: v.style ?? "",
+      stock: String(v.stockQuantity),
+      image: v.imageUrl ?? "",
+    })),
   };
 }
 
@@ -57,6 +67,8 @@ export function ProductFormDrawer({ productId, onClose, onSaved }: { productId?:
   const [formError, setFormError] = useState("");
   const [uploading, setUploading] = useState(0);
   const [saving, setSaving] = useState(false);
+  // Biến thể đang mở bảng chọn ảnh (theo key của dòng).
+  const [pickFor, setPickFor] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -110,6 +122,8 @@ export function ProductFormDrawer({ productId, onClose, onSaved }: { productId?:
     if (!f.materialId) e.materialId = "Chọn nguyên liệu";
     if (!price) e.price = "Giá bán phải lớn hơn 0";
     if (!f.images.length) e.mainImage = "Tải lên ít nhất một ảnh làm ảnh đại diện";
+    else if (!f.id && f.images.length < MIN_IMAGES_NEW)
+      e.mainImage = `Sản phẩm mới cần tối thiểu ${MIN_IMAGES_NEW} ảnh (gồm ảnh đại diện) — đang có ${f.images.length}`;
     if (!f.variants.length) e.variants = "Sản phẩm phải có ít nhất một biến thể.";
     else if (f.variants.some((v) => v.stock === "" || Number(v.stock) < 0)) e.variants = "Mỗi biến thể cần số tồn kho ≥ 0";
     else {
@@ -133,7 +147,14 @@ export function ProductFormDrawer({ productId, onClose, onSaved }: { productId?:
         description: f.description.trim() || null,
         isActive: f.isActive,
         // Biến thể có id: sửa; không có id: thêm mới; biến thể cũ không gửi lên: bị xóa mềm.
-        variants: f.variants.map((v) => ({ id: v.id, size: v.size.trim() || null, style: v.style.trim() || null, stockQuantity: Number(v.stock) })),
+        variants: f.variants.map((v) => ({
+          id: v.id,
+          size: v.size.trim() || null,
+          style: v.style.trim() || null,
+          // Ảnh đã gỡ khỏi bộ ảnh thì không gửi (biến thể quay về ảnh đại diện).
+          imageUrl: v.image && f.images.includes(v.image) ? v.image : null,
+          stockQuantity: Number(v.stock),
+        })),
       };
       await (f.id ? productApi.update(input) : productApi.create(input));
       notify(f.id ? "Đã lưu sản phẩm" : "Đã thêm sản phẩm mới");
@@ -249,7 +270,7 @@ export function ProductFormDrawer({ productId, onClose, onSaved }: { productId?:
 
           <div>
             <p className="hsv-label mb-2">
-              Hình ảnh * <span className="font-normal text-faint">· ảnh đầu tiên là ảnh đại diện · JPG, PNG, WEBP ≤ 5 MB</span>
+              Hình ảnh * <span className="font-normal text-faint">· ảnh đầu tiên là ảnh đại diện{f.id ? "" : ` · tối thiểu ${MIN_IMAGES_NEW} ảnh`} · JPG, PNG, WEBP ≤ 5 MB</span>
             </p>
             <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-6">
               {f.images.map((src, i) => (
@@ -318,8 +339,9 @@ export function ProductFormDrawer({ productId, onClose, onSaved }: { productId?:
               </button>
             </div>
             <div className="overflow-hidden rounded-card border border-line bg-white">
-              <div className="grid grid-cols-[28px_1fr_1fr_80px_52px_24px] gap-2 bg-surface px-3 py-2.5 text-[11.5px] font-bold text-muted2">
+              <div className="grid grid-cols-[28px_44px_1fr_1fr_80px_52px_24px] gap-2 bg-surface px-3 py-2.5 text-[11.5px] font-bold text-muted2">
                 <span>#</span>
+                <span>Ảnh</span>
                 <span>Kích thước</span>
                 <span>Kiểu dáng</span>
                 <span>Tồn kho</span>
@@ -328,9 +350,28 @@ export function ProductFormDrawer({ productId, onClose, onSaved }: { productId?:
               </div>
               {f.variants.map((v, i) => {
                 const stock = v.stock === "" ? null : Number(v.stock);
+                const img = v.image && f.images.includes(v.image) ? v.image : "";
                 return (
-                  <div key={v.key} className="grid grid-cols-[28px_1fr_1fr_80px_52px_24px] items-center gap-2 border-t border-line-2 px-3 py-2">
+                  <div key={v.key} className="border-t border-line-2">
+                  <div className="grid grid-cols-[28px_44px_1fr_1fr_80px_52px_24px] items-center gap-2 px-3 py-2">
                     <span className="text-[12.5px] text-faint">{i + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => setPickFor(pickFor === v.key ? null : v.key)}
+                      aria-label="Chọn ảnh cho biến thể"
+                      aria-expanded={pickFor === v.key}
+                      title={img ? "Ảnh riêng của biến thể" : "Đang dùng ảnh đại diện — bấm để chọn ảnh riêng"}
+                      className={cn(
+                        "relative h-10 w-10 overflow-hidden rounded-lg border",
+                        pickFor === v.key ? "border-navy ring-1 ring-navy" : img ? "border-line" : "border-dashed border-line-3"
+                      )}
+                    >
+                      {img ? (
+                        <ProductImage src={img} seed={i} className="h-full w-full" />
+                      ) : (
+                        <span className="flex h-full w-full items-center justify-center text-[10px] leading-tight text-faint">Ảnh</span>
+                      )}
+                    </button>
                     <input value={v.size} onChange={(e) => setRow(v.key, { size: e.target.value })} placeholder="Vừa" aria-label="Kích thước" className="h-9 min-w-0 rounded-lg border border-line px-2.5 text-[13.5px] outline-none focus:border-navy" />
                     <input value={v.style} onChange={(e) => setRow(v.key, { style: e.target.value })} placeholder="Răng dày" aria-label="Kiểu dáng" className="h-9 min-w-0 rounded-lg border border-line px-2.5 text-[13.5px] outline-none focus:border-navy" />
                     <input
@@ -353,10 +394,45 @@ export function ProductFormDrawer({ productId, onClose, onSaved }: { productId?:
                       <X className="h-4 w-4" />
                     </button>
                   </div>
+                  {pickFor === v.key && (
+                    <div className="border-t border-dashed border-line-2 bg-surface-2 px-3 py-2.5">
+                      <p className="mb-2 text-[12px] text-muted2">Ảnh hiện khi khách chọn biến thể này:</p>
+                      {f.images.length === 0 ? (
+                        <p className="text-[12px] text-faint">Tải ảnh sản phẩm ở mục Hình ảnh trước.</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => (setRow(v.key, { image: "" }), setPickFor(null))}
+                            className={cn(
+                              "flex h-14 w-14 items-center justify-center rounded-lg border bg-white px-1 text-center text-[10px] leading-tight",
+                              !img ? "border-navy font-semibold text-navy ring-1 ring-navy" : "border-line text-muted2"
+                            )}
+                          >
+                            Ảnh đại diện
+                          </button>
+                          {f.images.map((src, j) => (
+                            <button
+                              key={src}
+                              type="button"
+                              onClick={() => (setRow(v.key, { image: src }), setPickFor(null))}
+                              aria-label={`Chọn ảnh ${j + 1}`}
+                              className={cn("h-14 w-14 overflow-hidden rounded-lg border", img === src ? "border-navy ring-2 ring-navy" : "border-line hover:border-navy")}
+                            >
+                              <ProductImage src={src} seed={j} className="h-full w-full" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  </div>
                 );
               })}
             </div>
-            <p className="mt-1.5 text-xs text-faint">Bỏ trống cả kích thước và kiểu dáng thì biến thể hiển thị là “Mặc định”. Biến thể bị xóa sẽ được gỡ khỏi giỏ hàng của khách.</p>
+            <p className="mt-1.5 text-xs text-faint">
+              Bấm ô Ảnh để chọn ảnh riêng cho biến thể — khách chọn biến thể nào thì ảnh lớn đổi theo. Bỏ trống cả kích thước và kiểu dáng thì biến thể hiển thị là “Mặc định”. Biến thể bị xóa sẽ được gỡ khỏi giỏ hàng của khách.
+            </p>
             <FieldError message={errors.variants} />
           </div>
         </div>
