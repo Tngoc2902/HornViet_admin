@@ -69,7 +69,9 @@ export function ProductFormDrawer({ productId, onClose, onSaved }: { productId?:
   const [saving, setSaving] = useState(false);
   // Biến thể đang mở bảng chọn ảnh (theo key của dòng).
   const [pickFor, setPickFor] = useState<number | null>(null);
+  const [variantUploading, setVariantUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const variantFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (detail.data) setF(toForm(detail.data));
@@ -111,6 +113,30 @@ export function ProductFormDrawer({ productId, onClose, onSaved }: { productId?:
     }
   };
 
+  // Tải ảnh ngay trong bảng chọn của biến thể: ảnh được thêm vào bộ ảnh sản phẩm và gán luôn cho biến thể đang mở.
+  const uploadForVariant = async (file: File | undefined) => {
+    const key = pickFor;
+    if (!file || !f || key === null) return;
+    if (f.images.length >= MAX_IMAGES) return notify(`Đã đủ ${MAX_IMAGES} ảnh — gỡ bớt ảnh ở mục Hình ảnh trước`);
+    if (!ACCEPT.includes(file.type)) return notify(`“${file.name}”: chỉ nhận ảnh JPG, PNG, WEBP`);
+    if (file.size > MAX_IMAGE_BYTES) return notify(`“${file.name}” vượt quá 5 MB`);
+    setVariantUploading(true);
+    try {
+      const { url } = await fileApi.uploadImage(file);
+      setF((st) =>
+        st && st.images.length < MAX_IMAGES
+          ? { ...st, images: [...st.images, url], variants: st.variants.map((r) => (r.key === key ? { ...r, image: url } : r)) }
+          : st
+      );
+      setErrors((e) => ({ ...e, mainImage: undefined, variants: undefined }));
+      setPickFor(null);
+    } catch (e) {
+      notify(toApiError(e).message);
+    } finally {
+      setVariantUploading(false);
+    }
+  };
+
   const makeMain = (i: number) => f && set("images", [f.images[i], ...f.images.filter((_, j) => j !== i)]);
 
   const save = async () => {
@@ -129,6 +155,9 @@ export function ProductFormDrawer({ productId, onClose, onSaved }: { productId?:
     else {
       const keys = f.variants.map((v) => `${v.size.trim().toLowerCase()}|${v.style.trim().toLowerCase()}`);
       if (new Set(keys).size !== keys.length) e.variants = "Có biến thể bị trùng kích thước và kiểu dáng";
+      // Mỗi biến thể đi với 1 ảnh của sản phẩm.
+      else if (f.variants.some((v) => !(v.image && f.images.includes(v.image))))
+        e.variants = "Mỗi biến thể cần 1 ảnh — bấm ô Ảnh ở dòng được tô đỏ để chọn hoặc tải ảnh";
     }
     setErrors(e);
     setFormError("");
@@ -332,7 +361,7 @@ export function ProductFormDrawer({ productId, onClose, onSaved }: { productId?:
           <div>
             <div className="mb-2 flex items-center justify-between">
               <p className="text-[13px] font-semibold">
-                Biến thể &amp; tồn kho * <span className="font-normal text-faint">· tổng {total}</span>
+                Biến thể, ảnh &amp; tồn kho * <span className="font-normal text-faint">· tổng {total}</span>
               </p>
               <button type="button" onClick={() => set("variants", [...f.variants, blankRow()])} className="text-[13px] font-semibold text-gold">
                 + Thêm biến thể
@@ -360,16 +389,24 @@ export function ProductFormDrawer({ productId, onClose, onSaved }: { productId?:
                       onClick={() => setPickFor(pickFor === v.key ? null : v.key)}
                       aria-label="Chọn ảnh cho biến thể"
                       aria-expanded={pickFor === v.key}
-                      title={img ? "Ảnh riêng của biến thể" : "Đang dùng ảnh đại diện — bấm để chọn ảnh riêng"}
+                      title={img ? "Ảnh của biến thể — bấm để đổi" : "Chưa có ảnh — bấm để chọn"}
                       className={cn(
                         "relative h-10 w-10 overflow-hidden rounded-lg border",
-                        pickFor === v.key ? "border-navy ring-1 ring-navy" : img ? "border-line" : "border-dashed border-line-3"
+                        pickFor === v.key
+                          ? "border-navy ring-1 ring-navy"
+                          : img
+                            ? "border-line"
+                            : errors.variants
+                              ? "border-dashed border-danger bg-danger-soft"
+                              : "border-dashed border-line-3"
                       )}
                     >
                       {img ? (
                         <ProductImage src={img} seed={i} className="h-full w-full" />
                       ) : (
-                        <span className="flex h-full w-full items-center justify-center text-[10px] leading-tight text-faint">Ảnh</span>
+                        <span className={cn("flex h-full w-full items-center justify-center text-[10px] leading-tight", errors.variants ? "text-danger" : "text-faint")}>
+                          + Ảnh
+                        </span>
                       )}
                     </button>
                     <input value={v.size} onChange={(e) => setRow(v.key, { size: e.target.value })} placeholder="Vừa" aria-label="Kích thước" className="h-9 min-w-0 rounded-lg border border-line px-2.5 text-[13.5px] outline-none focus:border-navy" />
@@ -396,42 +433,52 @@ export function ProductFormDrawer({ productId, onClose, onSaved }: { productId?:
                   </div>
                   {pickFor === v.key && (
                     <div className="border-t border-dashed border-line-2 bg-surface-2 px-3 py-2.5">
-                      <p className="mb-2 text-[12px] text-muted2">Ảnh hiện khi khách chọn biến thể này:</p>
-                      {f.images.length === 0 ? (
-                        <p className="text-[12px] text-faint">Tải ảnh sản phẩm ở mục Hình ảnh trước.</p>
-                      ) : (
-                        <div className="flex flex-wrap gap-2">
+                      <p className="mb-2 text-[12px] text-muted2">Chọn 1 ảnh cho biến thể này (khách chọn biến thể thì ảnh lớn đổi theo):</p>
+                      <div className="flex flex-wrap gap-2">
+                        {f.images.map((src, j) => (
                           <button
+                            key={src}
                             type="button"
-                            onClick={() => (setRow(v.key, { image: "" }), setPickFor(null))}
+                            onClick={() => (setRow(v.key, { image: src }), setPickFor(null))}
+                            aria-label={`Chọn ảnh ${j + 1}`}
                             className={cn(
-                              "flex h-14 w-14 items-center justify-center rounded-lg border bg-white px-1 text-center text-[10px] leading-tight",
-                              !img ? "border-navy font-semibold text-navy ring-1 ring-navy" : "border-line text-muted2"
+                              "relative h-14 w-14 overflow-hidden rounded-lg border",
+                              img === src ? "border-navy ring-2 ring-navy" : "border-line hover:border-navy"
                             )}
                           >
-                            Ảnh đại diện
+                            <ProductImage src={src} seed={j} className="h-full w-full" />
+                            {j === 0 && <span className="absolute inset-x-0 bottom-0 bg-navy/80 text-center text-[9px] font-semibold text-white">Đại diện</span>}
                           </button>
-                          {f.images.map((src, j) => (
-                            <button
-                              key={src}
-                              type="button"
-                              onClick={() => (setRow(v.key, { image: src }), setPickFor(null))}
-                              aria-label={`Chọn ảnh ${j + 1}`}
-                              className={cn("h-14 w-14 overflow-hidden rounded-lg border", img === src ? "border-navy ring-2 ring-navy" : "border-line hover:border-navy")}
-                            >
-                              <ProductImage src={src} seed={j} className="h-full w-full" />
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                        ))}
+                        {f.images.length < MAX_IMAGES && (
+                          <button
+                            type="button"
+                            onClick={() => variantFileRef.current?.click()}
+                            disabled={variantUploading}
+                            className="flex h-14 w-14 flex-col items-center justify-center rounded-lg border border-dashed border-line-3 bg-white text-[10px] leading-tight text-muted2 hover:border-navy disabled:opacity-60"
+                          >
+                            {variantUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : "+ Tải ảnh"}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
                   </div>
                 );
               })}
             </div>
+            <input
+              ref={variantFileRef}
+              type="file"
+              accept={ACCEPT.join(",")}
+              hidden
+              onChange={(e) => {
+                void uploadForVariant(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
             <p className="mt-1.5 text-xs text-faint">
-              Bấm ô Ảnh để chọn ảnh riêng cho biến thể — khách chọn biến thể nào thì ảnh lớn đổi theo. Bỏ trống cả kích thước và kiểu dáng thì biến thể hiển thị là “Mặc định”. Biến thể bị xóa sẽ được gỡ khỏi giỏ hàng của khách.
+              Mỗi biến thể đi với 1 ảnh: bấm ô Ảnh để chọn trong ảnh sản phẩm hoặc tải ảnh mới — khách chọn biến thể nào thì ảnh lớn đổi theo. Bỏ trống cả kích thước và kiểu dáng thì biến thể hiển thị là “Mặc định”. Biến thể bị xóa sẽ được gỡ khỏi giỏ hàng của khách.
             </p>
             <FieldError message={errors.variants} />
           </div>
