@@ -5,8 +5,8 @@ import { toast } from "sonner";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { assetUrl, type ApiError } from "@/lib/api/http";
-import type { OrderStatus } from "@/lib/api/types";
-import { gradient, ORDER_FLOW, ORDER_STATUS } from "@/lib/hsv/format";
+import { DeliveryMethod, type OrderStatus } from "@/lib/api/types";
+import { gradient, ORDER_FLOW, ORDER_STATUS, PICKUP_FLOW } from "@/lib/hsv/format";
 import { tonesFor } from "@/lib/hsv/tones";
 
 /** Toast đen ở đáy giữa màn hình, tự ẩn sau 2.6s. Cùng `id` thì toast sau thay toast trước (không hiện trùng). */
@@ -57,12 +57,13 @@ export function StatusBadge({ status, className }: { status: OrderStatus; classN
   );
 }
 
-export function OrderProgress({ status }: { status: OrderStatus }) {
-  const idx = ORDER_FLOW.indexOf(status);
+export function OrderProgress({ status, deliveryMethod }: { status: OrderStatus; deliveryMethod?: DeliveryMethod }) {
+  const flow = deliveryMethod === DeliveryMethod.StorePickup ? PICKUP_FLOW : ORDER_FLOW;
+  const idx = flow.indexOf(status);
   if (idx < 0) return null;
   return (
     <div className="flex gap-2.5">
-      {ORDER_FLOW.map((k, i) => (
+      {flow.map((k, i) => (
         <div key={k} className="flex-1">
           <div className={cn("h-1 rounded-lg", i <= idx ? "bg-navy" : "bg-line")} />
           <p className={cn("mt-[7px] text-[12.5px]", i <= idx ? "text-navy" : "text-faint", i === idx && "font-semibold")}>

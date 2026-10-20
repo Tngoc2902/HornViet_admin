@@ -1,10 +1,15 @@
 // DTO theo swagger của backend (HonSungViet.Web.Host) — xem "Tài liệu API — Website Hồn Sừng Việt".
 
-export const OrderStatus = { Pending: 0, Shipping: 1, Completed: 2, Canceled: 3 } as const;
+/** ReadyForPickup: chỉ đơn nhận tại cửa hàng — hàng đã chuẩn bị xong, chờ khách đến nhận. */
+export const OrderStatus = { Pending: 0, Shipping: 1, Completed: 2, Canceled: 3, ReadyForPickup: 4 } as const;
 export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
 
 export const PaymentMethod = { Cod: 0, BankTransfer: 1 } as const;
 export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];
+
+/** Giao tận nơi (Giao Hàng Nhanh) hoặc nhận tại cửa hàng (không phí ship, không vận đơn). */
+export const DeliveryMethod = { Shipping: 0, StorePickup: 1 } as const;
+export type DeliveryMethod = (typeof DeliveryMethod)[keyof typeof DeliveryMethod];
 
 export const ProductSorting = { Newest: 0, PriceAsc: 1, PriceDesc: 2, NameAsc: 3, BestSelling: 4 } as const;
 export type ProductSorting = (typeof ProductSorting)[keyof typeof ProductSorting];
@@ -162,6 +167,8 @@ export type OrderListItem = {
   creationTime: string;
   status: OrderStatus;
   paymentMethod: PaymentMethod;
+  /** Backend cũ chưa trả trường này (coi như giao tận nơi). */
+  deliveryMethod?: DeliveryMethod;
   totalAmount: number;
   itemCount: number;
   receiverName: string;
@@ -210,7 +217,7 @@ export type Shipment = {
   shippingFee: number;
 };
 
-export type OrderQuery = PageInput & { status?: OrderStatus; keyword?: string; fromDate?: string; toDate?: string };
+export type OrderQuery = PageInput & { status?: OrderStatus; deliveryMethod?: DeliveryMethod; keyword?: string; fromDate?: string; toDate?: string };
 
 // ---------- Users (Admin)
 export type User = {
@@ -243,6 +250,8 @@ export type LowStockVariant = { productId: number; productName: string; variantI
 export type Dashboard = {
   pendingOrderCount: number;
   shippingOrderCount: number;
+  /** Đơn nhận tại cửa hàng đã chuẩn bị xong, chờ khách đến lấy. Backend cũ chưa trả. */
+  readyForPickupOrderCount?: number;
   todayOrderCount: number;
   customerCount: number;
   /** null khi Nhân viên gọi. */

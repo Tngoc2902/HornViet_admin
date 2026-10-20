@@ -43,7 +43,7 @@ export default function AdminDashboard() {
           ) : (
             <>
               <Kpi href={`/orders?status=${OrderStatus.Pending}`} label="Đơn chờ xử lý" value={String(d.pendingOrderCount)} note="Cần xác nhận" />
-              <Kpi href={`/orders?status=${OrderStatus.Shipping}`} label="Đơn đang giao" value={String(d.shippingOrderCount)} note="Đang vận chuyển" />
+              <Kpi href={`/orders?status=${OrderStatus.Shipping}`} label="Đơn đang giao" value={String(d.shippingOrderCount)} note={d.readyForPickupOrderCount ? `Đang vận chuyển · ${d.readyForPickupOrderCount} đơn chờ khách nhận tại cửa hàng` : "Đang vận chuyển"} />
               {showRevenue ? (
                 <Kpi
                   href="/statistics"
