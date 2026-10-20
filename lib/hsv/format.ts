@@ -1,4 +1,4 @@
-import { OrderStatus, PaymentMethod, type RoleName } from "@/lib/api/types";
+import { DeliveryMethod, OrderStatus, PaymentMethod, type RoleName } from "@/lib/api/types";
 import type { Tones } from "./tones";
 
 /** Trùng AppConsts.LowStockThreshold của backend. */
@@ -43,9 +43,24 @@ export const ORDER_STATUS: Record<OrderStatus, { label: string; fg: string; bg: 
   [OrderStatus.Shipping]: { label: "Đang giao", fg: "#1f4f7a", bg: "#e6eef6", bd: "#b9cde2" },
   [OrderStatus.Completed]: { label: "Hoàn thành", fg: "#2f5d3c", bg: "#e7f0e8", bd: "#bcd3c0" },
   [OrderStatus.Canceled]: { label: "Đã hủy", fg: "#6f665b", bg: "#efebe4", bd: "#dcd4c7" },
+  [OrderStatus.ReadyForPickup]: { label: "Chờ khách nhận", fg: "#1f4f7a", bg: "#e6eef6", bd: "#b9cde2" },
 };
 
 export const ORDER_FLOW: OrderStatus[] = [OrderStatus.Pending, OrderStatus.Shipping, OrderStatus.Completed];
+/** Đơn nhận tại cửa hàng: Chờ xử lý → Chờ khách nhận → Hoàn thành. */
+export const PICKUP_FLOW: OrderStatus[] = [OrderStatus.Pending, OrderStatus.ReadyForPickup, OrderStatus.Completed];
+
+export const isPickup = (o: { deliveryMethod?: DeliveryMethod }) => o.deliveryMethod === DeliveryMethod.StorePickup;
+
+export const DELIVERY_LABEL: Record<DeliveryMethod, string> = {
+  [DeliveryMethod.Shipping]: "Giao tận nơi",
+  [DeliveryMethod.StorePickup]: "Nhận tại cửa hàng",
+};
+
+/** Nhãn thanh toán theo hình thức nhận: COD của đơn nhận tại cửa hàng là trả tiền lúc khách đến lấy. */
+export function paymentLabel(o: { paymentMethod: PaymentMethod; deliveryMethod?: DeliveryMethod }) {
+  return isPickup(o) && o.paymentMethod === PaymentMethod.Cod ? "Thanh toán tại cửa hàng" : PAYMENT_LABEL[o.paymentMethod];
+}
 
 export type OrderTab = OrderStatus | "all";
 
@@ -53,13 +68,14 @@ export const ORDER_TABS: { key: OrderTab; label: string }[] = [
   { key: "all", label: "Tất cả" },
   { key: OrderStatus.Pending, label: "Chờ xử lý" },
   { key: OrderStatus.Shipping, label: "Đang giao" },
+  { key: OrderStatus.ReadyForPickup, label: "Chờ khách nhận" },
   { key: OrderStatus.Completed, label: "Hoàn thành" },
   { key: OrderStatus.Canceled, label: "Đã hủy" },
 ];
 
 export function parseOrderTab(v: string | null): OrderTab {
   const n = Number(v);
-  return v !== null && v !== "" && [0, 1, 2, 3].includes(n) ? (n as OrderStatus) : "all";
+  return v !== null && v !== "" && [0, 1, 2, 3, 4].includes(n) ? (n as OrderStatus) : "all";
 }
 
 export const ROLE_LABEL: Record<RoleName, string> = {

@@ -9,10 +9,10 @@ import { toApiError } from "@/lib/api/http";
 import { orderApi, shipmentApi, shippingApi } from "@/lib/api/services";
 import { isShipmentStale, SHIPMENT_STATUS, shipmentLabel, SIMULATION_NEXT, TONE_STYLE } from "@/lib/hsv/shipping";
 import { ShipmentProgress } from "@/components/hsv/shipment-progress";
-import { OrderStatus, PaymentMethod, type OrderListItem, type OrderLineSummary, type PagedResult } from "@/lib/api/types";
+import { DeliveryMethod, OrderStatus, PaymentMethod, type OrderListItem, type OrderLineSummary, type PagedResult } from "@/lib/api/types";
 import { emitOrdersChanged } from "@/lib/hsv/events";
 import { useRealtime, useRealtimeRefresh } from "@/hooks/use-realtime";
-import { formatDateTime, formatVND, ORDER_STATUS, ORDER_TABS, parseOrderTab, PAYMENT_LABEL } from "@/lib/hsv/format";
+import { DELIVERY_LABEL, formatDateTime, formatVND, isPickup, ORDER_STATUS, ORDER_TABS, parseOrderTab, paymentLabel } from "@/lib/hsv/format";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 15;
@@ -43,6 +43,18 @@ const NEXT: Partial<Record<OrderStatus, { to: OrderStatus; label: string }>> = {
   [OrderStatus.Pending]: { to: OrderStatus.Shipping, label: "Giao hàng" },
   [OrderStatus.Shipping]: { to: OrderStatus.Completed, label: "Xác nhận hoàn thành" },
 };
+
+/** Nhận tại cửa hàng: Chờ xử lý → Chờ khách nhận → Hoàn thành. */
+const NEXT_PICKUP: Partial<Record<OrderStatus, { to: OrderStatus; label: string }>> = {
+  [OrderStatus.Pending]: { to: OrderStatus.ReadyForPickup, label: "Hàng đã sẵn sàng" },
+  [OrderStatus.ReadyForPickup]: { to: OrderStatus.Completed, label: "Khách đã nhận hàng" },
+};
+
+const DELIVERY_FILTERS = [
+  { key: "all", label: "Mọi hình thức", value: undefined },
+  { key: "ship", label: "Giao tận nơi", value: DeliveryMethod.Shipping },
+  { key: "pickup", label: "Nhận tại cửa hàng", value: DeliveryMethod.StorePickup },
+] as const;
 
 function OrderDrawer({ id, onClose, onChanged }: { id: number; onClose: () => void; onChanged: () => void }) {
   const confirm = useConfirm();
@@ -106,10 +118,12 @@ function OrderDrawer({ id, onClose, onChanged }: { id: number; onClose: () => vo
   };
 
   // Đơn đã có vận đơn: trạng thái chạy theo GHN (webhook / làm mới), nhân viên không tự bấm Giao hàng / Hoàn thành.
-  const next = order && !order.ghnOrderCode ? NEXT[order.status] : undefined;
+  const pickup = !!order && isPickup(order);
+  const next = !order ? undefined : pickup ? NEXT_PICKUP[order.status] : !order.ghnOrderCode ? NEXT[order.status] : undefined;
   const shipmentOpen = order && (order.status === OrderStatus.Pending || order.status === OrderStatus.Shipping);
   const shipmentFinal = order?.ghnStatus === "delivered" || order?.ghnStatus === "returned";
-  const canCancel = order && (order.status === OrderStatus.Pending || order.status === OrderStatus.Shipping);
+  const canCancel =
+    order && (order.status === OrderStatus.Pending || order.status === OrderStatus.Shipping || order.status === OrderStatus.ReadyForPickup);
 
   return (
     <Drawer
@@ -161,20 +175,34 @@ function OrderDrawer({ id, onClose, onChanged }: { id: number; onClose: () => vo
         <LoadingRows rows={6} />
       ) : (
         <div className="flex flex-col gap-4">
-          <OrderProgress status={order.status} />
+          <OrderProgress status={order.status} deliveryMethod={order.deliveryMethod} />
           <div className="hsv-card p-4">
-            <p className="mb-2.5 text-xs font-bold text-muted2">KHÁCH HÀNG &amp; GIAO HÀNG</p>
+            <p className="mb-2.5 text-xs font-bold text-muted2">{pickup ? "KHÁCH HÀNG · NHẬN TẠI CỬA HÀNG" : "KHÁCH HÀNG & GIAO HÀNG"}</p>
             {order.userName && <p className="text-sm font-semibold">Tài khoản: {order.userName}</p>}
             <p className="mt-2 text-[13.5px]">
               Người nhận: <b>{order.receiverName}</b> · {order.phoneNumber}
             </p>
             <p className="mt-1 text-[13.5px] leading-normal text-ink-2">{order.shippingAddress}</p>
             <p className="mt-2 text-[13px] text-muted2">Ghi chú: {order.note || "—"}</p>
-            <p className="mt-1 text-[13px] text-muted2">{PAYMENT_LABEL[order.paymentMethod]}</p>
+            <p className="mt-1 text-[13px] text-muted2">{paymentLabel(order)}</p>
             {order.lastStatusChangeTime && (
               <p className="mt-1 text-[13px] text-muted2">Đổi trạng thái lần cuối: {formatDateTime(order.lastStatusChangeTime)}</p>
             )}
           </div>
+          {pickup ? (
+            <div className="hsv-card p-4">
+              <p className="mb-2.5 text-xs font-bold text-muted2">NHẬN TẠI CỬA HÀNG</p>
+              <p className="text-[13px] leading-relaxed text-muted2">
+                {order.status === OrderStatus.Pending
+                  ? "Khách sẽ đến cửa hàng nhận, không tạo vận đơn. Chuẩn bị hàng xong bấm “Hàng đã sẵn sàng” — khách được báo ngay trên trang Đơn hàng của tôi."
+                  : order.status === OrderStatus.ReadyForPickup
+                    ? `Hàng đã sẵn sàng, đang chờ khách đến nhận. Khi giao hàng, đối chiếu mã đơn ${order.code} hoặc số điện thoại ${order.phoneNumber}${
+                        order.paymentMethod === PaymentMethod.Cod ? `, thu ${formatVND(order.payableAmount ?? order.totalAmount)}` : ""
+                      } rồi bấm “Khách đã nhận hàng”.`
+                    : "Đơn nhận tại cửa hàng, không có vận đơn."}
+              </p>
+            </div>
+          ) : (
           <div className="hsv-card p-4">
             <p className="mb-2.5 text-xs font-bold text-muted2">VẬN ĐƠN GIAO HÀNG NHANH</p>
             {order.ghnOrderCode ? (
@@ -274,6 +302,7 @@ function OrderDrawer({ id, onClose, onChanged }: { id: number; onClose: () => vo
               <p className="text-[13px] text-muted2">Không có vận đơn.</p>
             )}
           </div>
+          )}
           <div className="hsv-card p-4">
             <p className="mb-1.5 text-xs font-bold text-muted2">SẢN PHẨM ({order.itemCount})</p>
             {order.items.map((i) => (
@@ -299,7 +328,9 @@ function OrderDrawer({ id, onClose, onChanged }: { id: number; onClose: () => vo
             </div>
           </div>
           <p className="text-[12.5px] text-faint">
-            {order.ghnOrderCode
+            {pickup
+              ? "Đơn nhận tại cửa hàng: Chờ xử lý → Chờ khách nhận → Hoàn thành; hủy được trước khi khách nhận hàng và tồn kho được hoàn lại."
+              : order.ghnOrderCode
               ? "Đơn có vận đơn Giao Hàng Nhanh: trạng thái tự cập nhật (GHN lấy hàng → Đang giao, giao thành công → Hoàn thành, hoàn hàng → Đã hủy). Hủy đơn sẽ hủy luôn vận đơn."
               : "Trạng thái chỉ chuyển theo thứ tự Chờ xử lý → Đang giao → Hoàn thành; hủy được khi đơn đang Chờ xử lý hoặc Đang giao và tồn kho được hoàn lại."}
           </p>
@@ -314,6 +345,7 @@ export default function AdminOrders() {
   const pathname = usePathname();
   const params = useSearchParams();
   const status = parseOrderTab(params.get("status"));
+  const delivery = DELIVERY_FILTERS.find((f) => f.key === params.get("delivery")) ?? DELIVERY_FILTERS[0];
   const openId = Number(params.get("open")) || null;
   const [q, setQ] = useState("");
   const keyword = useDebounced(q.trim());
@@ -329,13 +361,13 @@ export default function AdminOrders() {
   };
 
   const dateError = from && to && from > to ? "Ngày bắt đầu phải trước ngày kết thúc." : "";
-  const filters = { keyword: keyword || undefined, fromDate: from || undefined, toDate: to || undefined };
+  const filters = { keyword: keyword || undefined, fromDate: from || undefined, toDate: to || undefined, deliveryMethod: delivery.value };
   const list = useApi(
     () =>
       orderApi
         .getAll({ ...filters, status: status === "all" ? undefined : status, skipCount: (page - 1) * PAGE_SIZE, maxResultCount: PAGE_SIZE })
         .then(withItems),
-    [status, keyword, from, to, page],
+    [status, delivery.key, keyword, from, to, page],
     !dateError
   );
   const counts = useApi(
@@ -343,7 +375,7 @@ export default function AdminOrders() {
       Promise.all(
         ORDER_TABS.map((t) => orderApi.getAll({ ...filters, status: t.key === "all" ? undefined : t.key, maxResultCount: 1 }).then((r) => r.totalCount))
       ),
-    [keyword, from, to],
+    [delivery.key, keyword, from, to],
     !dateError
   );
 
@@ -378,6 +410,21 @@ export default function AdminOrders() {
         ))}
       </div>
       <div className="mb-3.5 flex flex-wrap items-center gap-2.5">
+        <div className="flex gap-1.5">
+          {DELIVERY_FILTERS.map((f) => (
+            <Chip
+              key={f.key}
+              active={delivery.key === f.key}
+              onClick={() => {
+                setPage(1);
+                setParam({ delivery: f.key === "all" ? null : f.key, open: null });
+              }}
+              className="px-3 py-[7px] text-[12.5px]"
+            >
+              {f.label}
+            </Chip>
+          ))}
+        </div>
         <input
           value={q}
           onChange={(e) => {
@@ -438,12 +485,15 @@ export default function AdminOrders() {
                   onClick={() => setParam({ open: String(o.id) })}
                   className={cn("grid w-full items-center gap-3 border-t border-line-2 px-5 py-[13px] text-left hover:bg-surface-2", COLS)}
                 >
-                  <span className="text-[13px] font-bold">{o.code}</span>
+                  <span>
+                    <span className="block text-[13px] font-bold">{o.code}</span>
+                    {isPickup(o) && <span className="mt-0.5 block text-[11px] font-semibold text-muted2">{DELIVERY_LABEL[DeliveryMethod.StorePickup]}</span>}
+                  </span>
                   <span className="truncate text-[13.5px] font-semibold">{o.receiverName}</span>
                   <OrderProducts lines={o.items} />
                   <span className="text-[12.5px] text-muted2">{formatDateTime(o.creationTime)}</span>
                   <span className="text-[13px]">{o.itemCount}</span>
-                  <span className="text-[12.5px] text-muted2">{o.paymentMethod === PaymentMethod.Cod ? "COD" : "Chuyển khoản"}</span>
+                  <span className="text-[12.5px] text-muted2">{o.paymentMethod === PaymentMethod.BankTransfer ? "Chuyển khoản" : isPickup(o) ? "Tại cửa hàng" : "COD"}</span>
                   <span>
                     <StatusBadge status={o.status} />
                   </span>

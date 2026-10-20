@@ -292,7 +292,7 @@ function sheetOverview(ws: Worksheet, r: RevenueReport, orders: OrderListItem[],
     c.border = BORDER;
     c.alignment = { horizontal: i ? "right" : "left" };
   });
-  for (const st of [OrderStatus.Pending, OrderStatus.Shipping, OrderStatus.Completed, OrderStatus.Canceled]) {
+  for (const st of [OrderStatus.Pending, OrderStatus.Shipping, OrderStatus.ReadyForPickup, OrderStatus.Completed, OrderStatus.Canceled]) {
     const list = orders.filter((o) => o.status === st);
     const rr = ws.getRow(row++);
     const vals: (string | number)[] = [ORDER_STATUS[st].label, list.length, orders.length ? list.length / orders.length : 0, list.reduce((s, o) => s + o.totalAmount, 0)];
