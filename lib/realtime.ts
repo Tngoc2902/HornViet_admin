@@ -2,7 +2,7 @@
 // Sự kiện server đẩy xuống được phát lại trên window ("hsv:realtime") để mọi trang nghe qua hook useRealtime().
 import { HubConnection, HubConnectionBuilder, LogLevel, type ILogger } from "@microsoft/signalr";
 import { API_BASE_URL } from "@/lib/api/http";
-import type { OrderStatus } from "@/lib/api/types";
+import type { ChatMessage, ChatStatus, OrderStatus } from "@/lib/api/types";
 
 export const HUB_URL = `${API_BASE_URL}/hubs/notifications`;
 
@@ -15,6 +15,10 @@ export type RealtimeEvents = {
   ProductChanged: { productId: number };
   ShipmentChanged: { orderId: number; code: string; ghnStatus: string | null };
   SessionRevoked: { reason: "locked" | "rolesChanged" | "passwordReset" | "passwordChanged" };
+  /** Tin mới của hội thoại đang mở (JoinChat). */
+  ChatMessage: { conversationId: number; message: ChatMessage };
+  /** Hội thoại hỗ trợ đổi trạng thái / có tin mới (gửi cả nhóm quản trị, không kèm nội dung). */
+  ChatConversationChanged: { conversationId: number; status: ChatStatus; staffUnread: number; staffUserId: number | null };
 };
 export type RealtimeEventName = keyof RealtimeEvents;
 
@@ -26,6 +30,8 @@ export const REALTIME_EVENT_NAMES: RealtimeEventName[] = [
   "ProductChanged",
   "ShipmentChanged",
   "SessionRevoked",
+  "ChatMessage",
+  "ChatConversationChanged",
 ];
 
 type Detail = { [K in RealtimeEventName]: { type: K; payload: RealtimeEvents[K] } }[RealtimeEventName];

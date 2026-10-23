@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { BarChart3, FolderTree, Gem, Layers, LayoutGrid, Menu, Package, ShoppingCart, Users, Warehouse, X } from "lucide-react";
+import { BarChart3, Bot, FolderTree, Gem, Headset, Layers, LayoutGrid, Menu, Package, ShoppingCart, Users, Warehouse, X } from "lucide-react";
 import { ChangePasswordDrawer } from "@/components/hsv/change-password-drawer";
 import { notify } from "@/components/hsv/ui";
 import { useAuth } from "@/contexts/auth-context";
 import { useApi } from "@/hooks/use-api";
+import { useRealtimeRefresh } from "@/hooks/use-realtime";
 import { STORE_URL } from "@/lib/api/http";
-import { statisticApi } from "@/lib/api/services";
+import { chatSupportApi, statisticApi } from "@/lib/api/services";
 import { ORDERS_CHANGED } from "@/lib/hsv/events";
 import { useRealtimeStatus } from "@/contexts/realtime-context";
 import { roleLabel } from "@/lib/hsv/format";
@@ -24,6 +25,8 @@ const ADMIN_NAV = [
   { href: "/products", label: "Sản phẩm", title: "Sản phẩm", icon: Package, adminOnly: false },
   { href: "/collections", label: "Bộ sưu tập", title: "Bộ sưu tập", icon: Layers, adminOnly: false },
   { href: "/orders", label: "Đơn hàng", title: "Quản lý đơn hàng", icon: ShoppingCart, adminOnly: false },
+  { href: "/support", label: "Hỗ trợ khách", title: "Hỗ trợ khách hàng", icon: Headset, adminOnly: false },
+  { href: "/chatbot", label: "Huấn luyện chatbot", title: "Huấn luyện chatbot", icon: Bot, adminOnly: false },
   { href: "/inventory", label: "Nhập kho", title: "Nhập kho & giá vốn", icon: Warehouse, adminOnly: true },
   { href: "/users", label: "Người dùng", title: "Quản lý người dùng", icon: Users, adminOnly: true },
   { href: "/statistics", label: "Thống kê", title: "Thống kê báo cáo", icon: BarChart3, adminOnly: true },
@@ -42,6 +45,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const dashboard = useApi(() => statisticApi.getDashboard(), [pathname], !!session);
   const reloadDashboard = dashboard.reload;
+  // Huy hiệu "Hỗ trợ khách": số hội thoại đang chờ + tin chưa đọc của mình, cập nhật theo sự kiện thời gian thực.
+  const chatSummary = useApi(() => chatSupportApi.getSummary(), [], !!session);
+  useRealtimeRefresh(["ChatConversationChanged"], chatSummary.reload, 600);
 
   // Chưa đăng nhập (hoặc phiên hết hạn / tài khoản bị khóa) → trang đăng nhập.
   useEffect(() => {
@@ -70,6 +76,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (!session) return null;
 
   const pending = dashboard.data?.pendingOrderCount ?? 0;
+  const chatBadge = (chatSummary.data?.waitingCount ?? 0) + (chatSummary.data?.mineUnread ?? 0);
   const nav = ADMIN_NAV.filter((n) => !n.adminOnly || isAdmin);
 
   const sidebar = (
@@ -100,6 +107,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <span className="flex-1">{n.label}</span>
               {n.href === "/orders" && pending > 0 && (
                 <span className="rounded-lg bg-gold px-2 py-0.5 text-[11px] font-bold text-white">{pending}</span>
+              )}
+              {n.href === "/support" && chatBadge > 0 && (
+                <span className="rounded-lg bg-danger px-2 py-0.5 text-[11px] font-bold text-white">{chatBadge}</span>
               )}
             </Link>
           );

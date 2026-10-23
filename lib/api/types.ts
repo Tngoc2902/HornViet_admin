@@ -346,3 +346,117 @@ export type CollectionInput = {
   /** Theo thứ tự hiển thị trong bộ. */
   productIds: number[];
 };
+
+// ---------- Chatbot / hỗ trợ khách hàng
+
+export const ChatSender = { Customer: 0, Bot: 1, Staff: 2, System: 3 } as const;
+export type ChatSender = (typeof ChatSender)[keyof typeof ChatSender];
+
+/** Bot: bot đang trả lời; WaitingStaff: khách bấm "Chat với nhân viên"; WithStaff: nhân viên đang trả lời; Closed: đã kết thúc. */
+export const ChatStatus = { Bot: 0, WaitingStaff: 1, WithStaff: 2, Closed: 3 } as const;
+export type ChatStatus = (typeof ChatStatus)[keyof typeof ChatStatus];
+
+/** Việc bot làm thêm khi nhận ra ý định (ngoài câu trả lời mẫu). */
+export const ChatIntentAction = { None: 0, SearchProducts: 1, ProductPrice: 2, ProductStock: 3, Collections: 4, MyOrders: 5, Handoff: 6 } as const;
+export type ChatIntentAction = (typeof ChatIntentAction)[keyof typeof ChatIntentAction];
+
+export type ChatMessage = {
+  id: number;
+  sender: ChatSender;
+  content: string;
+  staffName: string | null;
+  creationTime: string;
+  products: { id: number; name: string; mainImage: string; price: number; inStock: boolean; variants: string[] | null }[] | null;
+  orders: { id: number; code: string; status: OrderStatus; payableAmount: number; itemCount: number; creationTime: string }[] | null;
+  links: { label: string; url: string }[] | null;
+  quickReplies: string[] | null;
+  suggestStaff: boolean;
+  /** Câu trả lời do trợ lý AI (Gemini) soạn. */
+  ai: boolean;
+};
+
+export type ChatConversationListItem = {
+  id: number;
+  status: ChatStatus;
+  customerName: string;
+  isGuest: boolean;
+  staffUserId: number | null;
+  staffName: string | null;
+  lastMessage: string | null;
+  lastSender: ChatSender | null;
+  staffUnread: number;
+  messageCount: number;
+  lastMessageTime: string;
+  creationTime: string;
+};
+
+export type ChatSupportConversation = {
+  id: number;
+  status: ChatStatus;
+  customerName: string;
+  isGuest: boolean;
+  staffUserId: number | null;
+  staffName: string | null;
+  isMine: boolean;
+  staffOnline: boolean;
+  messages: ChatMessage[];
+  creationTime: string;
+};
+
+export type ChatConversationQuery = PageInput & { status?: ChatStatus };
+export type ChatSupportSummary = { waitingCount: number; mineUnread: number };
+
+export type ChatIntent = {
+  id: number;
+  code: string;
+  name: string;
+  answer: string;
+  linkLabel: string | null;
+  linkUrl: string | null;
+  action: ChatIntentAction;
+  isActive: boolean;
+  phraseCount: number;
+  /** Chỉ có khi xem chi tiết. */
+  phrases: string[] | null;
+};
+
+export type ChatIntentInput = {
+  id?: number;
+  code?: string;
+  name: string;
+  answer: string;
+  linkLabel?: string | null;
+  linkUrl?: string | null;
+  action: ChatIntentAction;
+  isActive: boolean;
+  phrases: string[];
+};
+
+export type ChatModel = {
+  id: number;
+  creationTime: string;
+  intentCount: number;
+  phraseCount: number;
+  accuracy: number;
+  macroAccuracy: number;
+  trainCount: number;
+  testCount: number;
+  perIntent: { code: string; name: string; support: number; precision: number; recall: number; f1: number }[];
+  confusions: { actual: string; predicted: string; count: number }[];
+  warnings: string[];
+  /** Câu mẫu đã đổi sau lần huấn luyện này. */
+  isOutdated: boolean;
+  isLoaded: boolean;
+};
+
+export type ChatUnrecognized = { messageId: number; text: string; intentCode: string | null; confidence: number | null; creationTime: string };
+
+export type ChatTestResult = {
+  normalized: string;
+  intentCode: string | null;
+  intentName: string | null;
+  confidence: number | null;
+  belowThreshold: boolean;
+  threshold: number;
+  reply: ChatMessage;
+};
