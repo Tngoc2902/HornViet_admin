@@ -6,6 +6,16 @@ import type {
   Cart,
   Category,
   CategoryInput,
+  ChatConversationListItem,
+  ChatConversationQuery,
+  ChatIntent,
+  ChatIntentInput,
+  ChatMessage,
+  ChatModel,
+  ChatSupportConversation,
+  ChatSupportSummary,
+  ChatTestResult,
+  ChatUnrecognized,
   Collection,
   CollectionInput,
   CreateOrderInput,
@@ -74,6 +84,34 @@ export const materialApi = {
   create: (input: MaterialInput) => http.post<Material>(app("Material/Create"), input),
   update: (input: MaterialInput) => http.put<Material>(app("Material/Update"), input),
   delete: (id: number) => http.delete<null>(app("Material/Delete"), { id }),
+};
+
+/** Hỗ trợ khách hàng: nhân viên xem hội thoại, tiếp nhận và trả lời trực tiếp. */
+export const chatSupportApi = {
+  getConversations: (q: ChatConversationQuery = {}) =>
+    http.get<PagedResult<ChatConversationListItem>>(app("ChatSupport/GetConversations"), q),
+  /** Người phụ trách (hoặc hội thoại đang chờ) mở xem → đánh dấu đã đọc. */
+  getConversation: (id: number) => http.get<ChatSupportConversation>(app("ChatSupport/GetConversation"), { id }),
+  claim: (conversationId: number, takeOver = false) => http.post<ChatSupportConversation>(app("ChatSupport/Claim"), { conversationId, takeOver }),
+  reply: (conversationId: number, text: string) => http.post<ChatMessage>(app("ChatSupport/Reply"), { conversationId, text }),
+  close: (id: number) => http.post<ChatSupportConversation>(app("ChatSupport/Close"), { id }),
+  getSummary: () => http.get<ChatSupportSummary>(app("ChatSupport/GetSummary")),
+};
+
+/** Huấn luyện chatbot: ý định, câu mẫu, model, câu bot chưa hiểu. */
+export const chatTrainingApi = {
+  getIntents: () => http.get<ListResult<ChatIntent>>(app("ChatTraining/GetIntents")),
+  getIntent: (id: number) => http.get<ChatIntent>(app("ChatTraining/GetIntent"), { id }),
+  createIntent: (input: ChatIntentInput) => http.post<ChatIntent>(app("ChatTraining/CreateIntent"), input),
+  updateIntent: (input: ChatIntentInput) => http.put<ChatIntent>(app("ChatTraining/UpdateIntent"), input),
+  deleteIntent: (id: number) => http.delete<null>(app("ChatTraining/DeleteIntent"), { id }),
+  train: () => http.post<ChatModel>(app("ChatTraining/Train")),
+  /** null = chưa huấn luyện lần nào. */
+  getModel: () => http.get<ChatModel | null>(app("ChatTraining/GetModel")),
+  test: (text: string) => http.post<ChatTestResult>(app("ChatTraining/Test"), { text }),
+  getUnrecognized: (q: PageInput = {}) => http.get<PagedResult<ChatUnrecognized>>(app("ChatTraining/GetUnrecognized"), q),
+  label: (messageId: number, intentId: number) => http.post<null>(app("ChatTraining/Label"), { messageId, intentId }),
+  dismiss: (id: number) => http.post<null>(app("ChatTraining/Dismiss"), { id }),
 };
 
 export const collectionApi = {
