@@ -6,9 +6,9 @@ import { Chip, Drawer, ErrorBox, FieldError, FormAlert, LoadingRows, notify, Pag
 import { useApi, useDebounced } from "@/hooks/use-api";
 import { useRealtimeRefresh } from "@/hooks/use-realtime";
 import { toApiError } from "@/lib/api/http";
+import { stockReceiptApi } from "@/lib/api/services";
 import type { StockReceipt, VariantCost } from "@/lib/api/types";
 import { formatDateTime, formatVND } from "@/lib/hsv/format";
-import { inventorySource, movingAverage } from "@/lib/hsv/mock-cost";
 import type { FieldErrors } from "@/lib/hsv/validation";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +17,12 @@ const COST_COLS = "grid-cols-[minmax(0,2fr)_90px_110px_120px_130px_110px_120px]"
 const RECEIPT_COLS = "grid-cols-[130px_minmax(0,2fr)_80px_110px_120px_minmax(0,1.2fr)_120px]";
 
 const parseNumber = (v: string) => Number(v.replace(/[.,\s]/g, ""));
+
+/** Giống ProductVariant.MovingAverage ở backend: (tồn × giá cũ + nhập × giá nhập) / (tồn + nhập). */
+function movingAverage(stock: number, average: number | null, qty: number, cost: number) {
+  if (stock <= 0 || average === null) return cost;
+  return (stock * average + qty * cost) / (stock + qty);
+}
 
 type ReceiptKey = "variant" | "quantity" | "unitCost";
 
@@ -40,7 +46,7 @@ function ReceiptDrawer({
   const [errors, setErrors] = useState<FieldErrors<ReceiptKey>>({});
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
-  const options = useApi(() => inventorySource.getVariantCosts({ maxResultCount: 100 }), [], picking);
+  const options = useApi(() => stockReceiptApi.getVariantCosts({ maxResultCount: 100 }), [], picking);
 
   const variant = initialVariant ?? options.data?.items.find((v) => String(v.productVariantId) === pickedId);
   const productName = variant?.productName ?? receipt?.productName ?? "";
@@ -62,10 +68,10 @@ function ReceiptDrawer({
     setBusy(true);
     try {
       if (receipt) {
-        await inventorySource.update({ id: receipt.id, quantity: qty, unitCost: cost, note: note.trim() || undefined });
+        await stockReceiptApi.update({ id: receipt.id, quantity: qty, unitCost: cost, note: note.trim() || undefined });
         notify("Đã sửa phiếu nhập, giá vốn đã được tính lại");
       } else if (variant) {
-        await inventorySource.create({ productVariantId: variant.productVariantId, quantity: qty, unitCost: cost, note: note.trim() || undefined });
+        await stockReceiptApi.create({ productVariantId: variant.productVariantId, quantity: qty, unitCost: cost, note: note.trim() || undefined });
         notify(`Đã nhập ${qty} sản phẩm`);
       }
       onSaved();
@@ -198,7 +204,7 @@ function VariantCostsTab({ version, onChanged }: { version: number; onChanged: (
   const [page, setPage] = useState(1);
   const [receiving, setReceiving] = useState<VariantCost | null>(null);
   const list = useApi(
-    () => inventorySource.getVariantCosts({ keyword: keyword || undefined, skipCount: (page - 1) * PAGE_SIZE, maxResultCount: PAGE_SIZE }),
+    () => stockReceiptApi.getVariantCosts({ keyword: keyword || undefined, skipCount: (page - 1) * PAGE_SIZE, maxResultCount: PAGE_SIZE }),
     [keyword, page, version]
   );
   const rows = list.data?.items ?? [];
@@ -279,7 +285,7 @@ function ReceiptsTab({ version, onChanged }: { version: number; onChanged: () =>
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<StockReceipt | null>(null);
   const list = useApi(
-    () => inventorySource.getAll({ keyword: keyword || undefined, skipCount: (page - 1) * PAGE_SIZE, maxResultCount: PAGE_SIZE }),
+    () => stockReceiptApi.getAll({ keyword: keyword || undefined, skipCount: (page - 1) * PAGE_SIZE, maxResultCount: PAGE_SIZE }),
     [keyword, page, version]
   );
   const rows = list.data?.items ?? [];
@@ -293,7 +299,7 @@ function ReceiptsTab({ version, onChanged }: { version: number; onChanged: () =>
     });
     if (!ok) return;
     try {
-      await inventorySource.delete(r.id);
+      await stockReceiptApi.delete(r.id);
       notify("Đã hủy phiếu nhập");
       onChanged();
     } catch (e) {
