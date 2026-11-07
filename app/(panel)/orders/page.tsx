@@ -9,7 +9,7 @@ import { toApiError } from "@/lib/api/http";
 import { orderApi, shipmentApi, shippingApi } from "@/lib/api/services";
 import { isShipmentStale, SHIPMENT_STATUS, shipmentLabel, SIMULATION_NEXT, TONE_STYLE } from "@/lib/hsv/shipping";
 import { ShipmentProgress } from "@/components/hsv/shipment-progress";
-import { DeliveryMethod, OrderStatus, PaymentMethod, type OrderListItem, type OrderLineSummary, type PagedResult } from "@/lib/api/types";
+import { DeliveryMethod, OrderStatus, PaymentMethod, type OrderLineSummary } from "@/lib/api/types";
 import { emitOrdersChanged } from "@/lib/hsv/events";
 import { useRealtime, useRealtimeRefresh } from "@/hooks/use-realtime";
 import { DELIVERY_LABEL, formatDateTime, formatVND, isPickup, ORDER_STATUS, ORDER_TABS, parseOrderTab, paymentLabel } from "@/lib/hsv/format";
@@ -17,15 +17,6 @@ import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 15;
 const COLS = "grid-cols-[110px_minmax(0,1fr)_minmax(0,1.8fr)_140px_60px_110px_120px_120px]";
-
-/** Backend cũ chưa trả `items` trong danh sách đơn → lấy từ chi tiết từng đơn trên trang. */
-async function withItems(result: PagedResult<OrderListItem>): Promise<PagedResult<OrderListItem>> {
-  if (result.items.every((o) => o.items)) return result;
-  const items = await Promise.all(
-    result.items.map(async (o) => (o.items ? o : { ...o, items: (await orderApi.get(o.id)).items }))
-  );
-  return { ...result, items };
-}
 
 /** Chỉ tên sản phẩm (gộp các biến thể cùng sản phẩm), một dòng. */
 function OrderProducts({ lines }: { lines?: OrderLineSummary[] }) {
@@ -365,8 +356,7 @@ export default function AdminOrders() {
   const list = useApi(
     () =>
       orderApi
-        .getAll({ ...filters, status: status === "all" ? undefined : status, skipCount: (page - 1) * PAGE_SIZE, maxResultCount: PAGE_SIZE })
-        .then(withItems),
+        .getAll({ ...filters, status: status === "all" ? undefined : status, skipCount: (page - 1) * PAGE_SIZE, maxResultCount: PAGE_SIZE }),
     [status, delivery.key, keyword, from, to, page],
     !dateError
   );
