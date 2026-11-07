@@ -106,41 +106,6 @@ export function Chip({
   );
 }
 
-export function Radio({ checked }: { checked: boolean }) {
-  return (
-    <span
-      className={cn("block h-4 w-4 shrink-0 rounded-full bg-white", checked ? "border-[5px] border-navy" : "border border-line-3")}
-    />
-  );
-}
-
-export function QtyStepper({
-  value,
-  onDec,
-  onInc,
-  size = "md",
-  disabled,
-}: {
-  value: number;
-  onDec: () => void;
-  onInc: () => void;
-  size?: "md" | "lg";
-  disabled?: boolean;
-}) {
-  const btn = size === "lg" ? "h-[50px] w-11 text-lg" : "h-9 w-9 text-base";
-  return (
-    <div className={cn("flex items-center rounded-lg border border-line bg-white", disabled && "opacity-60")}>
-      <button type="button" aria-label="Giảm" onClick={onDec} disabled={disabled} className={cn(btn, "text-ink-2")}>
-        −
-      </button>
-      <span className="min-w-[28px] text-center text-[15px] font-semibold">{value}</span>
-      <button type="button" aria-label="Tăng" onClick={onInc} disabled={disabled} className={cn(btn, "text-ink-2")}>
-        +
-      </button>
-    </div>
-  );
-}
-
 export function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return <p className="hsv-error">{message}</p>;
@@ -158,16 +123,6 @@ export function FormAlert({ message, tone = "danger" }: { message?: string | nul
     <p className={cn("whitespace-pre-line rounded-card border px-3.5 py-2.5 text-[13.5px] leading-relaxed", ALERT_TONES[tone])}>
       {message}
     </p>
-  );
-}
-
-export function EmptyState({ title, desc, action }: { title: string; desc?: string; action?: ReactNode }) {
-  return (
-    <div className="rounded-card border border-dashed border-[#cfd6df] bg-white px-6 py-20 text-center">
-      <p className="font-serif text-[22px]">{title}</p>
-      {desc && <p className="mt-2 text-sm text-subtle">{desc}</p>}
-      {action && <div className="mt-5">{action}</div>}
-    </div>
   );
 }
 

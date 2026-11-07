@@ -10,13 +10,12 @@ import { statisticApi } from "@/lib/api/services";
 import { exportBusinessReport } from "@/lib/hsv/export-report";
 import { RevenueGroupBy } from "@/lib/api/types";
 import { formatShortVND, formatVND, toDateParam } from "@/lib/hsv/format";
-import { mockRevenue, mockTopProducts } from "@/lib/hsv/mock-cost";
 import { cn } from "@/lib/utils";
 
 type Month = { y: number; m: number };
 
 /** Các khoảng thời gian tính theo ngày hiện tại → fromDate/toDate (yyyy-MM-dd). */
-/** Backend cũ (chưa cập nhật) không trả giá vốn/lợi nhuận → dev: dữ liệu ảo (mock-cost), production: hiện "—". */
+/** Thiếu dữ liệu giá vốn / lợi nhuận thì hiện "—". */
 const money = (v: number | null | undefined) => (v == null ? "—" : formatVND(Math.round(v)));
 
 function buildRanges(now: Date) {
@@ -58,16 +57,16 @@ export default function AdminStatistics() {
 
   // Doanh thu chỉ tính trên đơn ở trạng thái "Hoàn thành" (phía server).
   const revenue = useApi(
-    () => statisticApi.getRevenue({ fromDate: range.fromDate, toDate: range.toDate, groupBy: RevenueGroupBy.Month }).then(mockRevenue),
+    () => statisticApi.getRevenue({ fromDate: range.fromDate, toDate: range.toDate, groupBy: RevenueGroupBy.Month }),
     [range.key]
   );
   const top = useApi(
-    () => statisticApi.getTopProducts({ fromDate: range.fromDate, toDate: range.toDate, top: 5 }).then((t) => mockTopProducts(t.items)),
+    () => statisticApi.getTopProducts({ fromDate: range.fromDate, toDate: range.toDate, top: 5 }).then((t) => t.items),
     [range.key]
   );
 
-  const r = revenue.data?.data;
-  const topItems = top.data?.data;
+  const r = revenue.data;
+  const topItems = top.data;
 
   const [exporting, setExporting] = useState(false);
   const onExport = async () => {

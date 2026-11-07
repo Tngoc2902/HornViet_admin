@@ -6,7 +6,6 @@ import type { Borders, Cell, Fill, Worksheet } from "exceljs";
 import { orderApi, statisticApi, stockReceiptApi } from "@/lib/api/services";
 import { OrderStatus, RevenueGroupBy, type OrderListItem, type RevenueReport, type VariantCost } from "@/lib/api/types";
 import { ORDER_STATUS, PAYMENT_LABEL } from "./format";
-import { mockRevenue, mockTopProducts } from "./mock-cost";
 
 const NAVY = "FF0F2A4A";
 const GOLD = "FFB08D57";
@@ -111,9 +110,9 @@ export async function exportBusinessReport(range: ReportRange, exportedBy: strin
   // Dữ liệu: các lời gọi giống trang Thống kê + đơn hàng & tồn kho để lập bảng chi tiết.
   const q = { fromDate: range.fromDate, toDate: range.toDate };
   const [monthly, daily, top, orders, costs] = await Promise.all([
-    statisticApi.getRevenue({ ...q, groupBy: RevenueGroupBy.Month }).then((r) => mockRevenue(r).data),
-    statisticApi.getRevenue({ ...q, groupBy: RevenueGroupBy.Day }).then((r) => mockRevenue(r).data),
-    statisticApi.getTopProducts({ ...q, top: 50 }).then((t) => mockTopProducts(t.items).data),
+    statisticApi.getRevenue({ ...q, groupBy: RevenueGroupBy.Month }),
+    statisticApi.getRevenue({ ...q, groupBy: RevenueGroupBy.Day }),
+    statisticApi.getTopProducts({ ...q, top: 50 }).then((t) => t.items),
     fetchAll<OrderListItem>((skipCount) => orderApi.getAll({ ...q, skipCount, maxResultCount: 100 })),
     fetchAll<VariantCost>((skipCount) => stockReceiptApi.getVariantCosts({ skipCount, maxResultCount: 100 })).catch(() => null),
   ]);

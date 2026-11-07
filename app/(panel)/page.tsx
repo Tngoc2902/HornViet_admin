@@ -7,7 +7,6 @@ import { useRealtimeRefresh } from "@/hooks/use-realtime";
 import { orderApi, statisticApi } from "@/lib/api/services";
 import { OrderStatus } from "@/lib/api/types";
 import { formatDateTime, formatVND, LOW_STOCK_THRESHOLD } from "@/lib/hsv/format";
-import { mockDashboard } from "@/lib/hsv/mock-cost";
 
 function Kpi({ href, label, value, note }: { href: string; label: string; value: string; note: string }) {
   return (
@@ -20,14 +19,14 @@ function Kpi({ href, label, value, note }: { href: string; label: string; value:
 }
 
 export default function AdminDashboard() {
-  const dash = useApi(() => statisticApi.getDashboard().then(mockDashboard), []);
+  const dash = useApi(() => statisticApi.getDashboard(), []);
   const recent = useApi(() => orderApi.getAll({ maxResultCount: 5 }), []);
   // Đơn mới, đổi trạng thái, tồn kho thay đổi → số liệu và danh sách tự cập nhật.
   useRealtimeRefresh(["OrderCreated", "OrderStatusChanged", "StockChanged", "ProductChanged"], () => {
     void dash.reload();
     void recent.reload();
   });
-  const d = dash.data?.data;
+  const d = dash.data;
   // monthRevenue = null khi Nhân viên gọi → ẩn ô doanh thu.
   const showRevenue = d ? d.monthRevenue !== null && d.monthRevenue !== undefined : false;
   const low = d?.lowStockVariants ?? [];
@@ -49,7 +48,7 @@ export default function AdminDashboard() {
                   href="/statistics"
                   label={`Doanh thu tháng ${new Date().getMonth() + 1}`}
                   value={formatVND(d.monthRevenue)}
-                  note={d.monthProfit == null ? `Hôm nay: ${formatVND(d.todayRevenue)}` : `Lợi nhuận${dash.data?.mocked ? " (ảo)" : ""}: ${formatVND(Math.round(d.monthProfit))} · Hôm nay: ${formatVND(d.todayRevenue)}`}
+                  note={d.monthProfit == null ? `Hôm nay: ${formatVND(d.todayRevenue)}` : `Lợi nhuận: ${formatVND(Math.round(d.monthProfit))} · Hôm nay: ${formatVND(d.todayRevenue)}`}
                 />
               ) : (
                 <Kpi href="/orders" label="Đơn đặt hôm nay" value={String(d.todayOrderCount)} note={`${d.customerCount} khách hàng`} />

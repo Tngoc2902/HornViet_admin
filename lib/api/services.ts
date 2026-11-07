@@ -1,9 +1,6 @@
 import { http } from "./http";
 import type {
-  Address,
-  AddressInput,
   AuthenticateResult,
-  Cart,
   Category,
   CategoryInput,
   ChatConversationListItem,
@@ -18,7 +15,6 @@ import type {
   ChatUnrecognized,
   Collection,
   CollectionInput,
-  CreateOrderInput,
   CreateUserInput,
   Dashboard,
   ListResult,
@@ -35,13 +31,8 @@ import type {
   ProductAdminQuery,
   ProductDetail,
   ProductInput,
-  ProductListItem,
-  ProductListQuery,
-  Profile,
-  RegisterInput,
   RevenueGroupBy,
   RevenueReport,
-  Role,
   RoleName,
   StockReceipt,
   StockReceiptInput,
@@ -58,18 +49,11 @@ export const authApi = {
   /** Đăng nhập trang quản trị: server chỉ cấp token cho Nhân viên / Quản trị viên, Khách hàng nhận 400. */
   authenticate: (userNameOrEmailAddress: string, password: string) =>
     http.post<AuthenticateResult>("/api/TokenAuth/AuthenticateAdmin", { userNameOrEmailAddress, password }),
-  register: (input: RegisterInput) => http.post<{ userId: number; userName: string }>(app("Account/Register"), input),
 };
 
 export const profileApi = {
-  get: () => http.get<Profile>(app("Profile/GetMyProfile")),
-  update: (input: { name: string; phoneNumber: string }) => http.put<Profile>(app("Profile/UpdateMyProfile"), input),
   changePassword: (currentPassword: string, newPassword: string) =>
     http.post<null>(app("Profile/ChangePassword"), { currentPassword, newPassword }),
-  /** Địa chỉ mặc định đứng đầu. */
-  getAddresses: () => http.get<ListResult<Address>>(app("Profile/GetMyAddresses")),
-  saveAddress: (input: AddressInput) => http.post<Address>(app("Profile/SaveAddress"), input),
-  deleteAddress: (id: number) => http.delete<null>(app("Profile/DeleteAddress"), { id }),
 };
 
 export const categoryApi = {
@@ -125,7 +109,6 @@ export const collectionApi = {
 };
 
 export const productApi = {
-  getAll: (q: ProductListQuery = {}) => http.get<PagedResult<ProductListItem>>(app("Product/GetAll"), q),
   /** Khách: chỉ sản phẩm đang bán (404 nếu ẩn/xóa). Quản lý: cả sản phẩm đang ẩn. */
   get: (id: number) => http.get<ProductDetail>(app("Product/Get"), { id }),
   getAdminList: (q: ProductAdminQuery = {}) => http.get<PagedResult<ProductAdminListItem>>(app("Product/GetAdminList"), q),
@@ -144,18 +127,8 @@ export const fileApi = {
   },
 };
 
-export const cartApi = {
-  get: () => http.get<Cart>(app("Cart/GetMyCart")),
-  addItem: (productVariantId: number, quantity: number) => http.post<Cart>(app("Cart/AddItem"), { productVariantId, quantity }),
-  updateItem: (cartItemId: number, quantity: number) => http.put<Cart>(app("Cart/UpdateItem"), { cartItemId, quantity }),
-  deleteItem: (cartItemId: number) => http.delete<Cart>(app("Cart/DeleteItem"), { id: cartItemId }),
-};
-
 export const orderApi = {
-  create: (input: CreateOrderInput) => http.post<Order>(app("Order/Create"), input),
-  getMine: (q: PageInput & { status?: OrderStatus } = {}) => http.get<PagedResult<OrderListItem>>(app("Order/GetMyOrders"), q),
   get: (id: number) => http.get<Order>(app("Order/Get"), { id }),
-  cancel: (id: number) => http.post<Order>(app("Order/Cancel"), { id }),
   getAll: (q: OrderQuery = {}) => http.get<PagedResult<OrderListItem>>(app("Order/GetAll"), q),
   updateStatus: (id: number, status: OrderStatus) => http.put<Order>(app("Order/UpdateStatus"), { id, status }),
 };
@@ -175,7 +148,6 @@ export const shippingApi = {
 
 export const userApi = {
   getAll: (q: UserQuery = {}) => http.get<PagedResult<User>>(app("User/GetAll"), q),
-  getRoles: () => http.get<ListResult<Role>>(app("User/GetRoles")),
   create: (input: CreateUserInput) => http.post<User>(app("User/Create"), input),
   setRoles: (userId: number, roleNames: RoleName[]) => http.put<User>(app("User/SetRoles"), { userId, roleNames }),
   setActive: (userId: number, isActive: boolean) => http.put<User>(app("User/SetActive"), { userId, isActive }),
