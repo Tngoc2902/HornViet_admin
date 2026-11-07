@@ -11,9 +11,6 @@ export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];
 export const DeliveryMethod = { Shipping: 0, StorePickup: 1 } as const;
 export type DeliveryMethod = (typeof DeliveryMethod)[keyof typeof DeliveryMethod];
 
-export const ProductSorting = { Newest: 0, PriceAsc: 1, PriceDesc: 2, NameAsc: 3, BestSelling: 4 } as const;
-export type ProductSorting = (typeof ProductSorting)[keyof typeof ProductSorting];
-
 export const RevenueGroupBy = { Day: 0, Month: 1 } as const;
 export type RevenueGroupBy = (typeof RevenueGroupBy)[keyof typeof RevenueGroupBy];
 
@@ -33,50 +30,12 @@ export type AuthenticateResult = {
   roles: RoleName[];
 };
 
-export type RegisterInput = { name: string; emailAddress: string; phoneNumber: string; password: string; userName?: string };
-
-export type Profile = {
-  id: number;
-  userName: string;
-  name: string;
-  emailAddress: string;
-  phoneNumber: string | null;
-  roleNames: RoleName[];
-};
-
-export type Address = { id: number; receiverName: string; phoneNumber: string; address: string; isDefault: boolean };
-export type AddressInput = Omit<Address, "id"> & { id?: number };
-
 // ---------- Catalog
 export type Category = { id: number; name: string; description: string | null; productCount: number; creationTime: string };
 export type CategoryInput = { id?: number; name: string; description?: string | null };
 
 export type Material = { id: number; name: string; origin: string | null; description: string | null; image?: string | null };
 export type MaterialInput = { id?: number; name: string; origin?: string | null; description?: string | null; image?: string | null };
-
-export type ProductListItem = {
-  id: number;
-  name: string;
-  price: number;
-  mainImage: string | null;
-  categoryId: number;
-  categoryName: string;
-  materialId: number;
-  materialName: string;
-  totalStock: number;
-  inStock: boolean;
-  creationTime: string;
-};
-
-export type ProductListQuery = PageInput & {
-  keyword?: string;
-  categoryIds?: number[];
-  materialIds?: number[];
-  minPrice?: number;
-  maxPrice?: number;
-  inStockOnly?: boolean;
-  sorting?: ProductSorting;
-};
 
 export type ProductVariant = {
   id: number;
@@ -135,34 +94,7 @@ export type ProductInput = {
   images: string[];
 };
 
-// ---------- Cart
-export type CartItem = {
-  id: number;
-  productVariantId: number;
-  productId: number;
-  productName: string;
-  mainImage: string | null;
-  variantName: string;
-  size: string | null;
-  style: string | null;
-  unitPrice: number;
-  quantity: number;
-  lineTotal: number;
-  stockQuantity: number;
-  isAvailable: boolean;
-};
-
-export type Cart = { items: CartItem[]; totalQuantity: number; subTotal: number; canCheckout: boolean };
-
 // ---------- Orders
-export type CreateOrderInput = {
-  receiverName: string;
-  phoneNumber: string;
-  shippingAddress: string;
-  paymentMethod: PaymentMethod;
-  note?: string;
-};
-
 export type OrderListItem = {
   id: number;
   code: string;
@@ -232,8 +164,6 @@ export type User = {
   creationTime: string;
   roleNames: RoleName[];
 };
-
-export type Role = { id: number; name: RoleName; displayName: string };
 
 export type UserQuery = PageInput & { keyword?: string; roleName?: RoleName; isActive?: boolean };
 

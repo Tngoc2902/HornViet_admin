@@ -23,7 +23,3 @@ export function isStrongPassword(value: string) {
 }
 
 export type FieldErrors<K extends string = string> = Partial<Record<K, string>>;
-
-export function hasErrors(errors: FieldErrors) {
-  return Object.values(errors).some(Boolean);
-}

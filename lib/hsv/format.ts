@@ -4,8 +4,6 @@ import type { Tones } from "./tones";
 /** Trùng AppConsts.LowStockThreshold của backend. */
 export const LOW_STOCK_THRESHOLD = 5;
 
-export const BANK_INFO = "Vietcombank · 0451 000 123 456 · CTY TNHH HỒN SỪNG VIỆT";
-
 export function formatVND(value: number | null | undefined) {
   return (value ?? 0).toLocaleString("vi-VN") + "₫";
 }
@@ -97,8 +95,4 @@ export const PAYMENT_LABEL: Record<PaymentMethod, string> = {
 
 export function initialOf(name: string) {
   return name.trim().split(/\s+/).pop()?.charAt(0).toUpperCase() ?? "?";
-}
-
-export function lastName(name: string) {
-  return name.trim().split(/\s+/).pop() ?? name;
 }
