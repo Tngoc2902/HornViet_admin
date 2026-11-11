@@ -42,26 +42,22 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
       {children}
       {pending && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/45" onClick={() => close(false)} />
+          <div className="absolute inset-0 bg-black/40" onClick={() => close(false)} />
           <div
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="hsv-confirm-title"
-            className="relative w-[420px] max-w-full animate-hin rounded-card bg-white p-[26px] shadow-[0_24px_64px_rgba(0,0,0,.25)]"
+            className="relative w-[440px] max-w-full animate-hin overflow-hidden rounded-2xl bg-white shadow-[0_24px_64px_rgba(0,0,0,.3)]"
           >
-            <p id="hsv-confirm-title" className="text-[17px] font-bold">
+            <p id="hsv-confirm-title" className="border-b border-line bg-surface px-4 py-3 text-sm font-semibold">
               {pending.title}
             </p>
-            <p className="mt-2.5 text-sm leading-relaxed text-muted2">{pending.body}</p>
-            <div className="mt-[22px] flex justify-end gap-2.5">
-              <button onClick={() => close(false)} className="rounded-lg border border-line px-[18px] py-[11px] text-sm">
+            <p className="px-4 py-4 text-[13px] leading-5 text-ink-2">{pending.body}</p>
+            <div className="flex justify-end gap-2 border-t border-line px-4 py-3">
+              <button onClick={() => close(false)} className="hsv-btn-secondary">
                 Quay lại
               </button>
-              <button
-                ref={okRef}
-                onClick={() => close(true)}
-                className={`rounded-lg px-5 py-[11px] text-sm font-semibold text-white ${pending.danger ? "bg-danger" : "bg-navy"}`}
-              >
+              <button ref={okRef} onClick={() => close(true)} className={pending.danger ? "hsv-btn-danger" : "hsv-btn-primary"}>
                 {pending.okLabel ?? "Xác nhận"}
               </button>
             </div>

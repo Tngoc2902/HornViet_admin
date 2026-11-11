@@ -74,7 +74,7 @@ nên **không** đặt bí mật vào đây.
 
 Trang chỉ dành cho Quản trị viên khai báo ở `lib/hsv/admin-routes.ts`: Nhân viên không thấy trên menu và bị chuyển về Tổng quan.
 
-Nút **Đổi mật khẩu** ở cuối thanh bên (mọi tài khoản quản trị): đổi xong mọi phiên của tài khoản bị đăng xuất, kể cả phiên hiện tại.
+Mục **Đổi mật khẩu** trong menu tài khoản ở cuối thanh bên (mọi tài khoản quản trị): đổi xong mọi phiên của tài khoản bị đăng xuất, kể cả phiên hiện tại.
 Trang quản trị không có chức năng tự quên mật khẩu (chỉ trang cửa hàng có, bằng mã xác nhận qua email): Nhân viên quên mật khẩu thì
 Quản trị viên đặt lại ở trang Người dùng; tài khoản Quản trị viên và Nhân viên cũng không nhận được mã đặt lại từ backend.
 Tổng quan, Thống kê và Nhập kho lấy giá vốn / lợi nhuận trực tiếp từ backend (API `Statistic`, `StockReceipt`); thiếu dữ liệu thì hiện "—".

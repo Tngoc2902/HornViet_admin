@@ -32,10 +32,10 @@ export function shipmentLabel(status: string | null | undefined) {
 }
 
 export const TONE_STYLE: Record<ShipmentTone, { fg: string; bg: string; bd: string }> = {
-  info: { fg: "#1f4f7a", bg: "#e6eef6", bd: "#b9cde2" },
-  ok: { fg: "#2f5d3c", bg: "#e7f0e8", bd: "#bcd3c0" },
-  warn: { fg: "#8a5a12", bg: "#fbf1dc", bd: "#ecd29a" },
-  bad: { fg: "#9b3a2e", bg: "#f8e6e2", bd: "#e8c4bd" },
+  info: { fg: "#00527c", bg: "#e0f0ff", bd: "#a8d4f5" },
+  ok: { fg: "#0f4d00", bg: "#b9f886", bd: "#8fdc5a" },
+  warn: { fg: "#5e4200", bg: "#ffe6b5", bd: "#f5c56b" },
+  bad: { fg: "#c70a24", bg: "#fee8eb", bd: "#f7b9c0" },
 };
 
 /**

@@ -56,23 +56,22 @@ function AdminLoginForm() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-surface-2 px-4 py-12">
-      <div className="w-full max-w-[420px] animate-hin">
-        <div className="mb-6 flex items-center justify-center gap-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo-mark.svg" alt="" width={44} height={44} className="h-[44px] w-[44px] shrink-0" />
-          <div className="leading-tight">
-            <p className="font-serif text-xl">Hồn Sừng Việt</p>
-            <p className="mt-0.5 text-xs text-subtle">Trang quản trị</p>
+    <div className="flex min-h-screen items-center justify-center bg-chrome px-4 py-12">
+      <div className="w-full max-w-[400px] animate-hin">
+        <form onSubmit={submit} noValidate className="rounded-2xl bg-white p-8 shadow-[0_24px_64px_rgba(0,0,0,.4)]">
+          <div className="mb-6 flex items-center gap-2.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/logo-mark.svg" alt="" width={32} height={32} className="h-8 w-8 shrink-0 rounded-lg" />
+            <div className="leading-tight">
+              <p className="text-sm font-semibold">Hồn Sừng Việt</p>
+              <p className="text-xs text-muted2">Trang quản trị</p>
+            </div>
           </div>
-        </div>
-
-        <form onSubmit={submit} noValidate className="hsv-card p-8 shadow-card">
-          <div className="flex items-center gap-2.5">
-            <ShieldCheck className="h-5 w-5 text-gold" />
-            <h1 className="text-[19px] font-bold uppercase tracking-[0.05em]">Đăng nhập quản trị</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold tracking-[-0.01em]">Đăng nhập</h1>
+            <ShieldCheck className="h-4 w-4 text-muted2" />
           </div>
-          <p className="mt-2 text-[13.5px] text-muted2">Dành cho Nhân viên và Quản trị viên của cửa hàng.</p>
+          <p className="mt-1 text-[13px] text-muted2">Dành cho Nhân viên và Quản trị viên của cửa hàng.</p>
 
           {errors.form && (
             <div className="mt-4">
@@ -80,7 +79,7 @@ function AdminLoginForm() {
             </div>
           )}
 
-          <div className="mt-6 flex flex-col gap-4">
+          <div className="mt-5 flex flex-col gap-3.5">
             <div>
               <label htmlFor="al-user" className="hsv-label">
                 Tên đăng nhập hoặc email
@@ -91,7 +90,7 @@ function AdminLoginForm() {
                 onChange={(e) => setIdentifier(e.target.value)}
                 autoComplete="username"
                 autoFocus
-                className={cn("hsv-input", errors.identifier && "hsv-input-error")}
+                className={cn("hsv-input h-9", errors.identifier && "hsv-input-error")}
               />
               <FieldError message={errors.identifier} />
             </div>
@@ -105,23 +104,21 @@ function AdminLoginForm() {
                 value={pass}
                 onChange={(e) => setPass(e.target.value)}
                 autoComplete="current-password"
-                className={cn("hsv-input", errors.pass && "hsv-input-error")}
+                className={cn("hsv-input h-9", errors.pass && "hsv-input-error")}
               />
               <FieldError message={errors.pass} />
             </div>
-            <button type="submit" disabled={busy} className="hsv-btn-primary mt-1 h-[50px] text-[15px]">
+            <button type="submit" disabled={busy} className="hsv-btn-primary mt-1 h-9 rounded-lg text-[13px]">
               {busy ? "Đang đăng nhập…" : "Đăng nhập"}
             </button>
           </div>
 
-          <p className="mt-5 text-center text-[13px] text-subtle">
-            Quên mật khẩu? Liên hệ Quản trị viên để được đặt lại.
-          </p>
+          <p className="mt-5 text-xs text-muted2">Quên mật khẩu? Liên hệ Quản trị viên để được đặt lại.</p>
         </form>
 
         {STORE_URL && (
-          <p className="mt-5 text-center text-[13px] text-subtle">
-            <a href={STORE_URL} className="font-semibold text-ink-2 hover:text-navy">
+          <p className="mt-5 text-center text-[13px]">
+            <a href={STORE_URL} className="rounded text-chrome-muted hover:text-white">
               ← Về cửa hàng
             </a>
           </p>

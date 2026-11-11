@@ -1,16 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { CollectionFormDrawer } from "@/components/hsv/collection-form-drawer";
+import { Layers, Plus } from "lucide-react";
+import { CollectionForm } from "@/components/hsv/collection-form";
 import { useConfirm } from "@/components/hsv/confirm-provider";
-import { ErrorBox, LoadingRows, notify, ProductImage } from "@/components/hsv/ui";
+import { Badge, EmptyState, ErrorBox, LoadingRows, notify, PageHeader, ProductImage } from "@/components/hsv/ui";
 import { useApi } from "@/hooks/use-api";
 import { STORE_URL, toApiError } from "@/lib/api/http";
 import { collectionApi } from "@/lib/api/services";
 import type { Collection } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
-const COLS = "grid-cols-[minmax(240px,2fr)_minmax(180px,1.6fr)_100px_110px_70px_150px]";
+const COLS = "grid-cols-[minmax(240px,2fr)_minmax(180px,1.6fr)_110px_100px_80px_140px]";
 
 /** Bộ sưu tập: nhóm sản phẩm do nhân viên chọn, hiện ở mục “Bộ sưu tập” của cửa hàng. */
 export default function AdminCollections() {
@@ -65,21 +66,40 @@ export default function AdminCollections() {
     }
   };
 
+  // Đang thêm / sửa: form chiếm cả trang.
+  if (editing !== null) {
+    return (
+      <CollectionForm
+        key={editing}
+        id={editing}
+        onClose={() => setEditing(null)}
+        onSaved={() => {
+          setEditing(null);
+          void list.reload();
+        }}
+      />
+    );
+  }
+
   return (
     <div>
-      <div className="mb-3.5 flex flex-wrap items-center gap-3">
-        <p className="text-sm text-muted2">Nhóm sản phẩm theo chủ đề (quà Tết, quà cưới, đồ thủ công…). Một sản phẩm có thể nằm trong nhiều bộ.</p>
-        <button onClick={() => setEditing("new")} className="ml-auto rounded-lg bg-navy px-[18px] py-2.5 text-[13.5px] font-semibold text-white">
-          + Thêm bộ sưu tập
-        </button>
-      </div>
+      <PageHeader
+        title="Bộ sưu tập"
+        subtitle="Nhóm sản phẩm theo chủ đề (quà Tết, quà cưới, đồ thủ công…). Một sản phẩm có thể nằm trong nhiều bộ."
+        actions={
+          <button onClick={() => setEditing("new")} className="hsv-btn-primary">
+            <Plus className="h-4 w-4" />
+            Thêm bộ sưu tập
+          </button>
+        }
+      />
 
       {list.error && !list.data ? (
         <ErrorBox error={list.error} onRetry={list.reload} />
       ) : (
-        <div className={cn("hsv-card overflow-x-auto", list.loading && list.data && "opacity-70")}>
+        <div className={cn("overflow-x-auto", list.loading && list.data && "opacity-70")}>
           <div className="min-w-[900px]">
-            <div className={cn("grid gap-3 bg-surface px-5 py-3 text-xs font-bold text-muted2", COLS)}>
+            <div className={cn("hsv-thead grid gap-3", COLS)}>
               <span>Bộ sưu tập ({list.data ? rows.length : "…"})</span>
               <span>Mô tả</span>
               <span>Sản phẩm</span>
@@ -90,43 +110,49 @@ export default function AdminCollections() {
             {!list.data ? (
               <LoadingRows rows={4} />
             ) : rows.length === 0 ? (
-              <p className="px-5 py-8 text-center text-sm text-subtle">Chưa có bộ sưu tập nào. Bấm “+ Thêm bộ sưu tập” để tạo bộ đầu tiên.</p>
+              <EmptyState
+                icon={Layers}
+                title="Chưa có bộ sưu tập nào"
+                body="Tạo bộ sưu tập để gom sản phẩm theo chủ đề và hiện ở mục “Bộ sưu tập” của cửa hàng."
+                action={
+                  <button onClick={() => setEditing("new")} className="hsv-btn-primary">
+                    Thêm bộ sưu tập
+                  </button>
+                }
+              />
             ) : (
               rows.map((c) => (
-                <div key={c.id} className={cn("grid items-center gap-3 border-t border-line-2 px-5 py-3", COLS, busyId === c.id && "opacity-50")}>
+                <div key={c.id} className={cn("hsv-trow grid items-center gap-3", COLS, busyId === c.id && "opacity-50")}>
                   <div className="flex min-w-0 items-center gap-3">
-                    <ProductImage src={c.coverImage || c.previewImages[0]} seed={c.id} alt={c.name} className="h-[46px] w-[64px] shrink-0 rounded-lg" />
+                    <ProductImage src={c.coverImage || c.previewImages[0]} seed={c.id} alt={c.name} className="h-8 w-11 shrink-0 rounded-lg border border-line" />
                     <div className="min-w-0">
-                      <p className="truncate text-[13.5px] font-semibold leading-tight">{c.name}</p>
+                      <button onClick={() => setEditing(c.id)} className="block max-w-full truncate rounded text-left font-medium hover:underline">
+                        {c.name}
+                      </button>
                       <a
                         href={`${STORE_URL}/bo-suu-tap/${c.slug}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="mt-0.5 block truncate text-xs text-muted2 hover:text-navy hover:underline"
+                        className="block truncate text-xs text-muted2 hover:text-ink hover:underline"
                       >
                         /bo-suu-tap/{c.slug}
                       </a>
                     </div>
                   </div>
-                  <span className="line-clamp-2 text-[13px] text-muted2">{c.description || "—"}</span>
-                  <span className="text-[13px]">{c.productCount} sản phẩm</span>
-                  <span
-                    className={cn(
-                      "w-fit rounded-lg px-2.5 py-1 text-[11.5px] font-bold",
-                      c.isActive ? "bg-ok-soft text-ok" : "bg-[#efebe4] text-muted2"
-                    )}
-                  >
-                    {c.isActive ? "Đang hiện" : "Tạm ẩn"}
+                  <span className="line-clamp-2 text-muted2">{c.description || "—"}</span>
+                  <span>{c.productCount} sản phẩm</span>
+                  <span>
+                    <Badge tone={c.isActive ? "ok" : "neutral"}>{c.isActive ? "Đang hiện" : "Tạm ẩn"}</Badge>
                   </span>
-                  <span className="text-[13px]">{c.displayOrder}</span>
-                  <div className="flex justify-end gap-3.5">
-                    <button onClick={() => setEditing(c.id)} className="text-[13px] font-semibold">
+                  <span>{c.displayOrder}</span>
+                  <div className="flex justify-end gap-3">
+                    <button onClick={() => setEditing(c.id)} className="hsv-link">
                       Sửa
                     </button>
-                    <button onClick={() => toggle(c)} disabled={busyId === c.id} className="text-[13px] font-semibold text-muted2">
+                    <button onClick={() => toggle(c)} disabled={busyId === c.id} className="hsv-link-muted">
                       {c.isActive ? "Ẩn" : "Hiện"}
                     </button>
-                    <button onClick={() => remove(c)} disabled={busyId === c.id} className="text-[13px] font-semibold text-danger">
+                    <button onClick={() => remove(c)} disabled={busyId === c.id} className="hsv-link-danger">
                       Xóa
                     </button>
                   </div>
@@ -135,18 +161,6 @@ export default function AdminCollections() {
             )}
           </div>
         </div>
-      )}
-
-      {editing !== null && (
-        <CollectionFormDrawer
-          key={editing}
-          id={editing}
-          onClose={() => setEditing(null)}
-          onSaved={() => {
-            setEditing(null);
-            void list.reload();
-          }}
-        />
       )}
     </div>
   );
