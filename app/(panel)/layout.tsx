@@ -6,6 +6,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import {
   BarChart3,
   Bot,
+  ChevronRight,
   ChevronsUpDown,
   CornerDownLeft,
   ExternalLink,
@@ -68,6 +69,16 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/statistics", label: "Thống kê", title: "Thống kê báo cáo", icon: BarChart3, adminOnly: true, section: "Quản trị" },
   { href: "/users", label: "Người dùng", title: "Quản lý người dùng", icon: Users, adminOnly: true, section: "Quản trị" },
 ];
+
+const NAV_SECTIONS_KEY = "hsv-admin-nav-closed";
+
+function loadClosedSections(): Record<string, boolean> {
+  try {
+    return JSON.parse(window.localStorage.getItem(NAV_SECTIONS_KEY) ?? "{}") as Record<string, boolean>;
+  } catch {
+    return {};
+  }
+}
 
 type SearchEntry = { href: string; label: string; hint: string; icon: LucideIcon };
 
@@ -233,6 +244,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const menuRef = useOutsideClose(menuOpen, () => setMenuOpen(false));
   const mainRef = useRef<HTMLElement>(null);
   const { onLinkClick } = useGuardedNav();
+  // Nhóm menu ("Khách hàng", "Quản trị") nào đang thu gọn.
+  const [closedSections, setClosedSections] = useState<Record<string, boolean>>(loadClosedSections);
 
   const current = ADMIN_NAV.find((n) => (n.href === "/" ? pathname === "/" : pathname.startsWith(n.href)));
   const forbidden = !!current?.adminOnly && !isAdmin;
@@ -271,6 +284,33 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [reloadDashboard]);
 
   const nav = useMemo(() => ADMIN_NAV.filter((n) => !n.adminOnly || isAdmin), [isAdmin]);
+  // Menu dạng cây: nhóm (có tên hoặc không) → mục → mục con.
+  const navGroups = useMemo(() => {
+    const groups: { section?: string; items: { item: NavItem; children: NavItem[] }[] }[] = [];
+    for (const item of nav.filter((n) => !n.parent)) {
+      const entry = { item, children: nav.filter((c) => c.parent === item.href) };
+      const last = groups[groups.length - 1];
+      if (last && last.section === item.section) last.items.push(entry);
+      else groups.push({ section: item.section, items: [entry] });
+    }
+    return groups;
+  }, [nav]);
+
+  // Mục đang mở dropdown = mục chứa trang hiện tại (chính nó hoặc mục cha của nó); các mục khác tự gập lại.
+  const currentGroup = current ? (current.parent ?? current.href) : null;
+  // Vào một trang nằm trong nhóm đang thu gọn → mở lại nhóm đó.
+  const currentSection = current ? (current.section ?? ADMIN_NAV.find((n) => n.href === current.parent)?.section) : undefined;
+  useEffect(() => {
+    if (currentSection) setClosedSections((s) => (s[currentSection] ? { ...s, [currentSection]: false } : s));
+  }, [currentSection]);
+
+  // Nhớ nhóm nào đang thu gọn giữa các lần mở trang quản trị (chỉ là tùy chọn hiển thị, không phải dữ liệu).
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(NAV_SECTIONS_KEY, JSON.stringify(closedSections));
+    } catch {}
+  }, [closedSections]);
+
   const searchEntries = useMemo<SearchEntry[]>(
     () => [...nav.map((n) => ({ href: n.href, label: n.label, hint: n.title === n.label ? "Trang" : n.title, icon: n.icon })), ...SHORTCUTS],
     [nav]
@@ -283,6 +323,53 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const realtimeLabel = realtime === "connected" ? "Cập nhật trực tiếp" : realtime === "connecting" ? "Đang kết nối…" : "Mất kết nối trực tiếp";
   const realtimeDot = realtime === "connected" ? "bg-[#3ecf6e]" : realtime === "connecting" ? "bg-[#e0b252]" : "bg-[#6b6b6b]";
   const navItem = "flex h-7 items-center gap-2 rounded-lg px-2 text-[13px] transition-colors";
+
+  const badgeOf = (href: string) => (href === "/orders" ? pending : href === "/support" ? chatBadge : 0);
+  const navBadge = (href: string, count: number) =>
+    count > 0 && (
+      <span className={cn("rounded-full px-1.5 text-[11px] font-semibold leading-[18px]", href === "/support" ? "bg-[#e5484d] text-white" : "bg-white/15 text-white")}>
+        {count}
+      </span>
+    );
+  /**
+   * Một dòng menu; `child` = mục con trong dropdown (thụt vào, không có biểu tượng);
+   * `expanded` = mục cha đang sổ mục con ra (chữ trắng dù trang hiện tại là một mục con).
+   */
+  const navLink = (n: NavItem, child = false, expanded?: boolean) => {
+    const active = n === current;
+    const Icon = n.icon;
+    return (
+      <Link
+        key={n.href}
+        href={n.href}
+        onClick={(e) => onLinkClick(e, n.href)}
+        aria-current={active ? "page" : undefined}
+        aria-expanded={expanded}
+        className={cn(
+          navItem,
+          child && "pl-[32px]",
+          active
+            ? "bg-chrome-active font-semibold text-white"
+            : child
+              ? "text-chrome-muted hover:bg-white/[.06] hover:text-chrome-text"
+              : expanded
+                ? "font-medium text-white hover:bg-white/[.06]"
+                : "text-chrome-text hover:bg-white/[.06]"
+        )}
+      >
+        {!child && <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />}
+        <span className="min-w-0 flex-1 truncate">{n.label}</span>
+        {navBadge(n.href, badgeOf(n.href))}
+      </Link>
+    );
+  };
+  // Dropdown sổ xuống: hàng lưới co giãn 0fr ↔ 1fr để chiều cao chạy mượt; khi đóng thì ẩn hẳn khỏi phím Tab.
+  const dropdownOuter = (open: boolean) => cn("grid transition-[grid-template-rows] duration-200 ease-out", open ? "grid-rows-[1fr]" : "grid-rows-[0fr]");
+  const dropdownInner = (open: boolean) =>
+    cn(
+      "flex min-h-0 flex-col gap-px overflow-hidden",
+      open ? "visible opacity-100 [transition:opacity_.2s]" : "invisible opacity-0 [transition:opacity_.15s,visibility_0s_.2s]"
+    );
 
   const brand = (
     <Link href="/" onClick={(e) => onLinkClick(e, "/")} className="flex h-8 items-center gap-2 rounded-lg px-1.5">
@@ -298,41 +385,43 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="mb-2 mt-2">
         <QuickSearch entries={searchEntries} />
       </div>
-      <nav aria-label="Menu quản trị" className="flex min-h-0 flex-1 flex-col gap-px overflow-y-auto scrollbar-none">
-        {nav.map((n, i) => {
-          const active = n === current;
-          const Icon = n.icon;
-          const badge = n.href === "/orders" ? pending : n.href === "/support" ? chatBadge : 0;
+      <nav aria-label="Menu quản trị" className="flex min-h-0 flex-1 flex-col overflow-y-auto scrollbar-none">
+        {navGroups.map((g, gi) => {
+          const closed = !!g.section && !!closedSections[g.section];
+          const sectionBadge = g.items.reduce((sum, { item, children }) => sum + badgeOf(item.href) + children.reduce((s, c) => s + badgeOf(c.href), 0), 0);
           return (
-            <div key={n.href}>
-              {n.section && nav[i - 1]?.section !== n.section && <p className="mb-0.5 mt-3 px-2 text-xs text-chrome-muted">{n.section}</p>}
-              <Link
-                href={n.href}
-                onClick={(e) => onLinkClick(e, n.href)}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  navItem,
-                  n.parent && "pl-[32px]",
-                  active
-                    ? "bg-chrome-active font-semibold text-white"
-                    : n.parent
-                      ? "text-chrome-muted hover:bg-white/[.06] hover:text-chrome-text"
-                      : "text-chrome-text hover:bg-white/[.06]"
-                )}
-              >
-                {!n.parent && <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />}
-                <span className="min-w-0 flex-1 truncate">{n.label}</span>
-                {badge > 0 && (
-                  <span
-                    className={cn(
-                      "rounded-full px-1.5 text-[11px] font-semibold leading-[18px]",
-                      n.href === "/support" ? "bg-[#e5484d] text-white" : "bg-white/15 text-white"
-                    )}
-                  >
-                    {badge}
-                  </span>
-                )}
-              </Link>
+            <div key={g.section ?? gi}>
+              {g.section && (
+                // Tên nhóm bấm được để thu gọn / mở cả nhóm; thu gọn thì hiện tổng số việc đang chờ của nhóm.
+                <button
+                  type="button"
+                  onClick={() => setClosedSections((s) => ({ ...s, [g.section!]: !s[g.section!] }))}
+                  aria-expanded={!closed}
+                  className="mb-0.5 mt-3 flex h-6 w-full items-center gap-1 rounded-lg px-2 text-left text-xs text-chrome-muted transition-colors hover:text-chrome-text"
+                >
+                  {g.section}
+                  <ChevronRight className={cn("h-3 w-3 transition-transform duration-200", !closed && "rotate-90")} />
+                  {closed && <span className="ml-auto">{navBadge("/support", sectionBadge)}</span>}
+                </button>
+              )}
+              <div className={dropdownOuter(!closed)}>
+                <div className={dropdownInner(!closed)}>
+                  {g.items.map(({ item, children }) => {
+                    if (children.length === 0) return navLink(item);
+                    // Mục có mục con: vào trang của mục (hoặc của một mục con) thì các mục con sổ xuống bên dưới;
+                    // sang mục khác thì tự gập lại.
+                    const open = currentGroup === item.href;
+                    return (
+                      <div key={item.href}>
+                        {navLink(item, false, open)}
+                        <div className={dropdownOuter(open)}>
+                          <div className={cn(dropdownInner(open), "pt-px")}>{children.map((c) => navLink(c, true))}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           );
         })}
