@@ -30,6 +30,8 @@ const STATUS = [
   { key: "on", label: "Đang bán", value: true },
   { key: "off", label: "Tạm ẩn", value: false },
 ] as const;
+/** Tab của danh sách: ba tab trạng thái + tab "Sắp hết hàng". */
+type View = (typeof STATUS)[number]["key"] | "low";
 
 export default function AdminProducts() {
   const { categories } = useCatalog();
@@ -66,29 +68,41 @@ export default function AdminProducts() {
     router.replace(s ? `${pathname}?${s}` : pathname, { scroll: false });
   };
 
+  // Tab đang xem. Bốn tab loại trừ nhau (như các chế độ xem của Shopify): "Sắp hết hàng" (?warn=1) là một tab riêng,
+  // không phải công tắc bật thêm lên trên tab trạng thái — đang ở tab này thì bộ lọc trạng thái không áp dụng.
+  const view: View = lowOnly ? "low" : status;
+  const openView = (v: View) => {
+    if (v === "low") {
+      if (!lowOnly) setParam("warn", "1");
+      return;
+    }
+    setStatus(v);
+    if (lowOnly) setParam("warn", null);
+  };
+
   /** Bộ lọc đang áp dụng (dùng chung cho danh sách và cho "Chọn tất cả N sản phẩm"). */
   const listFilter = () => ({
     keyword: keyword || undefined,
     categoryId: cat,
-    isActive: STATUS.find((s) => s.key === status)?.value,
+    isActive: lowOnly ? undefined : STATUS.find((s) => s.key === status)?.value,
     lowStockOnly: lowOnly || undefined,
   });
 
   const list = useApi(
     () => productApi.getAdminList({ ...listFilter(), skipCount: (page - 1) * PAGE_SIZE, maxResultCount: PAGE_SIZE }),
-    [keyword, cat, status, lowOnly, page],
+    [keyword, cat, view, page],
     // Bảng chỉnh sửa hàng loạt đang che danh sách → không tải danh sách; đóng bảng thì tự tải lại.
     bulkIds.length === 0
   );
   useRealtimeRefresh(["StockChanged", "ProductChanged"], () => list.reload());
   const rows = list.data?.items ?? [];
-  const filtered = !!keyword || cat !== undefined || status !== "all" || lowOnly;
+  const filtered = !!keyword || cat !== undefined || view !== "all";
 
   // Đổi bộ lọc hoặc sang trang khác → bỏ chọn: thao tác hàng loạt chỉ áp dụng cho các dòng đang thấy.
   useEffect(() => {
     setSelected(new Set());
     setAllMatching(false);
-  }, [keyword, cat, status, lowOnly, page]);
+  }, [keyword, cat, view, page]);
 
   const picked = rows.filter((p) => selected.has(p.id));
   const allPicked = rows.length > 0 && picked.length === rows.length;
@@ -266,11 +280,11 @@ export default function AdminProducts() {
           <div className="hsv-toolbar">
             <div className="flex max-w-full gap-1 overflow-x-auto scrollbar-none">
               {STATUS.map((s) => (
-                <Chip key={s.key} active={status === s.key} onClick={() => filter(() => setStatus(s.key))}>
+                <Chip key={s.key} active={view === s.key} onClick={() => filter(() => openView(s.key))}>
                   {s.label}
                 </Chip>
               ))}
-              <Chip active={lowOnly} onClick={() => filter(() => setParam("warn", lowOnly ? null : "1"))}>
+              <Chip active={view === "low"} onClick={() => filter(() => openView("low"))}>
                 Sắp hết hàng
               </Chip>
             </div>

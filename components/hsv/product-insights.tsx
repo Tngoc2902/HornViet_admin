@@ -52,7 +52,10 @@ async function loadInsights() {
   const valueByGrade: Record<Grade, number> = { A: 0, B: 0, C: 0 };
   for (const v of variants) valueByGrade[grade.get(v.productId) ?? "C"] += v.stockValue ?? 0;
 
+  const dd = (d: Date) => `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
   return {
+    /** Kỳ đã tính, VD "15/10 – 13/11" (hiện trong chú giải của nhãn "30 ngày qua"). */
+    range: `${dd(from)} – ${dd(to)}`,
     sold,
     stock,
     /** Lượng bán / (lượng bán + tồn cuối kỳ); null khi chưa có cả hai. */
@@ -113,9 +116,23 @@ export function ProductInsights() {
 
   return (
     <div className="mb-3 flex flex-wrap items-start gap-y-2" aria-busy={loading}>
-      <div className="flex h-12 shrink-0 items-center gap-1.5 border-r border-line pl-1 pr-5 text-xs text-ink-2" title="Kỳ tính: 30 ngày gần nhất">
-        <CalendarDays className="h-3.5 w-3.5" />
-        {DAYS} ngày
+      {/* Kỳ tính của ba chỉ số bên cạnh (cố định 30 ngày gần nhất, không phải bộ lọc của danh sách) — rê chuột / chọn bằng bàn phím để xem giải thích. */}
+      <div className="group relative flex h-12 shrink-0 items-center border-r border-line pl-1 pr-5">
+        <button type="button" className="flex cursor-help items-center gap-1.5 rounded text-xs text-ink-2">
+          <CalendarDays className="h-3.5 w-3.5" />
+          <span className="border-b border-dotted border-faint">{DAYS} ngày qua</span>
+        </button>
+        <div
+          role="tooltip"
+          className="pointer-events-none invisible absolute left-1 top-full z-20 mt-1 w-[300px] rounded-xl bg-brand p-3 text-left text-white opacity-0 shadow-dropdown transition-opacity group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100"
+        >
+          <p className="text-[13px] font-semibold">Kỳ tính chỉ số: {DAYS} ngày qua</p>
+          <p className="mt-0.5 text-xs text-chrome-text">
+            Ba chỉ số bên cạnh tính trên {DAYS} ngày gần nhất{data ? ` (${data.range})` : ""}: lượng bán lấy từ các đơn đã hoàn thành trong kỳ, còn tồn kho và giá vốn là số hiện
+            tại.
+          </p>
+          <p className="mt-2 text-[11px] leading-4 text-chrome-muted">Đây không phải bộ lọc của danh sách sản phẩm bên dưới.</p>
+        </div>
       </div>
       {error && !data ? (
         <p className="flex h-12 items-center gap-2 px-4 text-[13px] text-muted2">

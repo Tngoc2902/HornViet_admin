@@ -166,7 +166,7 @@ function ReportList({
 
   return (
     <div>
-      <PageHeader title="Báo cáo" />
+      <PageHeader title="Báo cáo" subtitle="Báo cáo dựng sẵn: hệ thống tự tính từ đơn hàng, kho và giá vốn mỗi lần bạn mở, không cần ai soạn hay nhập liệu." />
       <div className="hsv-index">
         <div className="hsv-toolbar">
           <div className="flex w-full flex-wrap gap-1 border-b border-line-2 pb-1.5">
