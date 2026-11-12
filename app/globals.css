@@ -62,8 +62,14 @@
     @apply h-auto resize-y py-2 leading-5;
   }
 
+  /* Ô của bảng chỉnh sửa hàng loạt: không có viền riêng (viền là đường kẻ của bảng); đang nhập thì viền xanh bên trong ô. */
+  .hsv-cell {
+    @apply h-9 w-full bg-transparent px-3 text-[13px] font-normal text-ink outline-none placeholder:text-faint focus:bg-white focus:shadow-[inset_0_0_0_2px_#005bd3] disabled:cursor-not-allowed disabled:text-faint;
+  }
+
   /* Ô chọn: bỏ mũi tên mặc định của trình duyệt, dùng mũi tên đôi lên / xuống. */
-  select.hsv-input {
+  select.hsv-input,
+  select.hsv-cell {
     @apply cursor-pointer appearance-none pr-8;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%234a4a4a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 15 5 5 5-5'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3C/svg%3E");
     background-position: right 8px center;

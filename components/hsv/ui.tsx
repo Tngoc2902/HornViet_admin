@@ -312,11 +312,14 @@ export function DetailPage({
   backLabel = "Quay lại danh sách",
   actions,
   aside,
+  wide,
   children,
 }: {
   title: ReactNode;
   /** Tên trang danh sách (hiện cạnh nút quay lại), VD "Sản phẩm". */
   parent: string;
+  /** Dùng hết bề ngang khung nội dung (bảng rộng như chỉnh sửa hàng loạt) thay vì cột giữa 960px. */
+  wide?: boolean;
   badge?: ReactNode;
   meta?: ReactNode;
   onBack: () => void;
@@ -348,7 +351,7 @@ export function DetailPage({
         </button>
         {actions && <div className="ml-auto flex flex-wrap items-center gap-1.5">{actions}</div>}
       </div>
-      <div className="mx-auto w-full max-w-[960px]">
+      <div className={cn("w-full", !wide && "mx-auto max-w-[960px]")}>
         <div className="mb-3">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="hsv-page-title min-w-0 truncate">{title}</h1>
