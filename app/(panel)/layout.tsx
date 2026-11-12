@@ -27,6 +27,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { ChangePasswordDrawer } from "@/components/hsv/change-password-drawer";
+import { useConfirm } from "@/components/hsv/confirm-provider";
 import { notify } from "@/components/hsv/ui";
 import { useAuth } from "@/contexts/auth-context";
 import { useApi } from "@/hooks/use-api";
@@ -37,6 +38,7 @@ import { OrderStatus } from "@/lib/api/types";
 import { ORDERS_CHANGED } from "@/lib/hsv/events";
 import { useRealtimeStatus } from "@/contexts/realtime-context";
 import { initialOf, roleLabel } from "@/lib/hsv/format";
+import { LEAVE_CONFIRM, unsavedChanges } from "@/lib/hsv/unsaved";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -99,9 +101,29 @@ function useOutsideClose(open: boolean, close: () => void) {
   return ref;
 }
 
+/**
+ * Chuyển trang từ khung chung (menu, ô tìm nhanh): nếu form đang mở còn thay đổi chưa lưu thì hỏi lại trước,
+ * vì thanh bên vẫn bấm được trong lúc đang sửa.
+ */
+function useGuardedNav() {
+  const router = useRouter();
+  const confirm = useConfirm();
+  const navigate = async (href: string) => {
+    if (unsavedChanges.pending && !(await confirm(LEAVE_CONFIRM))) return;
+    router.push(href);
+  };
+  /** Gắn vào onClick của <Link>: chỉ chặn khi có thay đổi chưa lưu và là cú bấm trái thông thường. */
+  const onLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (!unsavedChanges.pending || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    void navigate(href);
+  };
+  return { navigate, onLinkClick };
+}
+
 /** Ô tìm kiếm ở đầu thanh bên: gõ để nhảy nhanh tới một trang / chức năng (Ctrl K để đặt con trỏ). */
 function QuickSearch({ entries }: { entries: SearchEntry[] }) {
-  const router = useRouter();
+  const { navigate } = useGuardedNav();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
@@ -128,7 +150,7 @@ function QuickSearch({ entries }: { entries: SearchEntry[] }) {
     setOpen(false);
     setQ("");
     inputRef.current?.blur();
-    router.push(href);
+    void navigate(href);
   };
 
   return (
@@ -210,6 +232,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [changingPassword, setChangingPassword] = useState(false);
   const menuRef = useOutsideClose(menuOpen, () => setMenuOpen(false));
   const mainRef = useRef<HTMLElement>(null);
+  const { onLinkClick } = useGuardedNav();
 
   const current = ADMIN_NAV.find((n) => (n.href === "/" ? pathname === "/" : pathname.startsWith(n.href)));
   const forbidden = !!current?.adminOnly && !isAdmin;
@@ -262,7 +285,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const navItem = "flex h-7 items-center gap-2 rounded-lg px-2 text-[13px] transition-colors";
 
   const brand = (
-    <Link href="/" className="flex h-8 items-center gap-2 rounded-lg px-1.5">
+    <Link href="/" onClick={(e) => onLinkClick(e, "/")} className="flex h-8 items-center gap-2 rounded-lg px-1.5">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/brand/logo-mark.svg" alt="" width={24} height={24} className="h-6 w-6 shrink-0 rounded-md" />
       <span className="truncate text-[13px] font-semibold text-white">Hồn Sừng Việt</span>
@@ -285,6 +308,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               {n.section && nav[i - 1]?.section !== n.section && <p className="mb-0.5 mt-3 px-2 text-xs text-chrome-muted">{n.section}</p>}
               <Link
                 href={n.href}
+                onClick={(e) => onLinkClick(e, n.href)}
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   navItem,

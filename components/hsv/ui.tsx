@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { AlertCircle, AlertTriangle, ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, Inbox, Search, X, type LucideIcon } from "lucide-react";
@@ -9,6 +9,7 @@ import { assetUrl, type ApiError } from "@/lib/api/http";
 import { DeliveryMethod, type OrderStatus } from "@/lib/api/types";
 import { gradient, ORDER_FLOW, ORDER_STATUS, PICKUP_FLOW } from "@/lib/hsv/format";
 import { tonesFor } from "@/lib/hsv/tones";
+import { unsavedChanges } from "@/lib/hsv/unsaved";
 
 /** Toast tối ở đáy giữa màn hình, tự ẩn sau 2.6s. Cùng `id` thì toast sau thay toast trước (không hiện trùng). */
 export function notify(message: string, id?: string) {
@@ -347,7 +348,11 @@ export function DetailPage({
   );
 }
 
-/** Thanh “Thay đổi chưa lưu” nổi ở trên cùng (đè lên thanh trên) với nút Bỏ / Lưu. */
+/**
+ * Thanh “Thay đổi chưa lưu” nổi ở đầu khung nội dung với nút Bỏ / Lưu.
+ * Khi `dirty` (form đã sửa): Ctrl S để lưu, tải lại / đóng tab bị trình duyệt hỏi lại, và khung trang hỏi lại
+ * trước khi chuyển sang trang khác (xem lib/hsv/unsaved.ts).
+ */
 export function SaveBar({
   message = "Thay đổi chưa lưu",
   note,
@@ -355,6 +360,7 @@ export function SaveBar({
   onSave,
   saving,
   disabled,
+  dirty = true,
   saveLabel = "Lưu",
   discardLabel = "Bỏ",
 }: {
@@ -364,9 +370,35 @@ export function SaveBar({
   onSave: () => void;
   saving?: boolean;
   disabled?: boolean;
+  /** false = form mới chưa nhập gì: vẫn hiện thanh nhưng rời trang không cần hỏi lại. */
+  dirty?: boolean;
   saveLabel?: string;
   discardLabel?: string;
 }) {
+  const latest = useRef({ onSave, blocked: !!saving || !!disabled });
+  latest.current = { onSave, blocked: !!saving || !!disabled };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "s") return;
+      e.preventDefault();
+      if (!latest.current.blocked) latest.current.onSave();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
+    if (!dirty) return;
+    const clear = unsavedChanges.mark();
+    const onBeforeUnload = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => {
+      clear();
+      window.removeEventListener("beforeunload", onBeforeUnload);
+    };
+  }, [dirty]);
+
   return createPortal(
     <div role="region" aria-label="Lưu thay đổi" className="pointer-events-none fixed inset-x-0 top-2 z-[58] flex justify-center px-3 lg:left-[200px]">
       <div className="pointer-events-auto flex h-11 w-full max-w-[640px] animate-bar-in items-center gap-2 rounded-xl bg-brand pl-3.5 pr-2 text-white shadow-[0_8px_24px_rgba(0,0,0,.28)]">
@@ -376,7 +408,7 @@ export function SaveBar({
         <button type="button" onClick={onDiscard} disabled={saving} className="hsv-btn bg-white/10 text-white hover:bg-white/20">
           {discardLabel}
         </button>
-        <button type="button" onClick={onSave} disabled={saving || disabled} className="hsv-btn bg-white font-semibold text-ink hover:bg-surface-active">
+        <button type="button" onClick={onSave} disabled={saving || disabled} title="Ctrl S" className="hsv-btn bg-white font-semibold text-ink hover:bg-surface-active">
           {saving ? "Đang lưu…" : saveLabel}
         </button>
       </div>

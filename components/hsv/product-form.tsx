@@ -324,6 +324,7 @@ export function ProductForm({ productId, onClose, onSaved }: { productId?: numbe
       {(isNew || dirty) && f && (
         <SaveBar
           message={isNew ? "Sản phẩm chưa lưu" : "Thay đổi chưa lưu"}
+          dirty={dirty}
           note={uploading > 0 ? "Đang tải ảnh lên…" : undefined}
           onDiscard={discard}
           onSave={save}

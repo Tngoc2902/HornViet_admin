@@ -237,6 +237,7 @@ export function CollectionForm({ id, onClose, onSaved }: { id: number | "new"; o
       {(isNew || dirty) && form && (
         <SaveBar
           message={isNew ? "Bộ sưu tập chưa lưu" : "Thay đổi chưa lưu"}
+          dirty={dirty}
           note={uploading ? "Đang tải ảnh lên…" : undefined}
           onDiscard={discard}
           onSave={save}
