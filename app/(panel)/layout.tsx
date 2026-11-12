@@ -511,7 +511,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Khung nội dung trắng bo góc, cuộn riêng bên trong khung tối. */}
       <div className="pt-12 lg:py-1 lg:pl-[200px] lg:pr-1">
-        <main ref={mainRef} id="hsv-main" className="min-h-[calc(100vh-3rem)] bg-canvas px-4 pb-16 pt-3 lg:h-[calc(100vh-8px)] lg:min-h-0 lg:overflow-y-auto lg:rounded-xl">
+        {/* relative: phần tử định vị tuyệt đối bên trong (bảng ẩn của biểu đồ, chú giải) nằm gọn trong khung cuộn này, không kéo dài cả trang. */}
+        <main ref={mainRef} id="hsv-main" className="relative min-h-[calc(100vh-3rem)] bg-canvas px-4 pb-16 pt-3 lg:h-[calc(100vh-8px)] lg:min-h-0 lg:overflow-y-auto lg:rounded-xl">
           {/* Trang chỉ dành cho Quản trị viên: không render nội dung trong lúc chuyển về Tổng quan. */}
           {!forbidden && (
             <Suspense>
