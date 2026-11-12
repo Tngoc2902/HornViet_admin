@@ -445,7 +445,20 @@ export function SaveBar({
  * Phân trang gọn kiểu Shopify: một viên nhỏ "‹ 1–50 ›" dính ở góc dưới bên trái khung đang cuộn, luôn trong tầm tay
  * khi cuộn hết danh sách dài. Trang n (bắt đầu từ 1) ↔ skipCount = (n - 1) * pageSize.
  */
-export function Pager({ page, total, pageSize, onChange }: { page: number; total: number; pageSize: number; onChange: (p: number) => void }) {
+export function Pager({
+  page,
+  total,
+  pageSize,
+  onChange,
+  anchorId,
+}: {
+  page: number;
+  total: number;
+  pageSize: number;
+  onChange: (p: number) => void;
+  /** Sang trang thì cuộn tới phần tử này (VD bảng nằm dưới biểu đồ) thay vì về đầu trang. */
+  anchorId?: string;
+}) {
   if (total <= 0) return null;
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const from = (page - 1) * pageSize + 1;
@@ -453,7 +466,9 @@ export function Pager({ page, total, pageSize, onChange }: { page: number; total
   const go = (p: number) => {
     onChange(p);
     // Sang trang khác thì về đầu danh sách (khung nội dung cuộn riêng).
-    document.getElementById("hsv-main")?.scrollTo({ top: 0 });
+    const anchor = anchorId ? document.getElementById(anchorId) : null;
+    if (anchor) anchor.scrollIntoView({ block: "start" });
+    else document.getElementById("hsv-main")?.scrollTo({ top: 0 });
   };
   const arrow =
     "flex h-7 w-7 items-center justify-center rounded-lg text-ink-2 transition-colors hover:bg-surface-active disabled:cursor-not-allowed disabled:text-faint disabled:hover:bg-transparent";

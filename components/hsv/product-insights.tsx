@@ -2,29 +2,18 @@
 
 import { type ReactNode, useRef } from "react";
 import { CalendarDays, RefreshCw } from "lucide-react";
+import { abcGrades, allVariantCosts } from "@/components/hsv/reports";
 import { Skeleton } from "@/components/hsv/ui";
 import { useApi } from "@/hooks/use-api";
 import { useRealtimeRefresh } from "@/hooks/use-realtime";
-import { statisticApi, stockReceiptApi } from "@/lib/api/services";
-import type { VariantCost } from "@/lib/api/types";
+import { statisticApi } from "@/lib/api/services";
 import { formatShortVND, formatVND, toDateParam } from "@/lib/hsv/format";
 
 const DAYS = 30;
 /** Statistic/GetTopProducts trả tối đa 50 sản phẩm bán chạy nhất. */
 const TOP_LIMIT = 50;
-/** Trang tối đa của các API danh sách (AppConsts.MaxPageSize ở backend). */
-const PAGE = 100;
 
 type Grade = "A" | "B" | "C";
-
-async function loadAllVariantCosts() {
-  const all: VariantCost[] = [];
-  for (;;) {
-    const r = await stockReceiptApi.getVariantCosts({ skipCount: all.length, maxResultCount: PAGE });
-    all.push(...r.items);
-    if (!r.items.length || all.length >= r.totalCount) return all;
-  }
-}
 
 /** Kết quả gần nhất dùng lại trong ít phút: quay lại danh sách từ trang sửa sản phẩm không phải đọc lại toàn bộ giá vốn. */
 const CACHE_MS = 2 * 60 * 1000;
@@ -52,21 +41,14 @@ async function loadInsights() {
   from.setDate(to.getDate() - (DAYS - 1));
   const [sales, variants] = await Promise.all([
     statisticApi.getTopProducts({ fromDate: toDateParam(from), toDate: toDateParam(to), top: TOP_LIMIT }).then((r) => r.items),
-    loadAllVariantCosts(),
+    allVariantCosts(),
   ]);
 
   const sold = sales.reduce((s, p) => s + p.quantitySold, 0);
   const stock = variants.reduce((s, v) => s + v.stockQuantity, 0);
 
   // Xếp hạng ABC theo doanh thu trong kỳ: nhóm A góp 80% doanh thu đầu, B 15% tiếp theo, C phần còn lại (kể cả sản phẩm chưa bán được).
-  const revenue = sales.reduce((s, p) => s + p.revenue, 0);
-  const grade = new Map<number, Grade>();
-  let cumulative = 0;
-  for (const p of [...sales].sort((a, b) => b.revenue - a.revenue)) {
-    const share = revenue > 0 ? cumulative / revenue : 1;
-    grade.set(p.productId, share < 0.8 ? "A" : share < 0.95 ? "B" : "C");
-    cumulative += p.revenue;
-  }
+  const grade = abcGrades(sales);
   const valueByGrade: Record<Grade, number> = { A: 0, B: 0, C: 0 };
   for (const v of variants) valueByGrade[grade.get(v.productId) ?? "C"] += v.stockValue ?? 0;
 

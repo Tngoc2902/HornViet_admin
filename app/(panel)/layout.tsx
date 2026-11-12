@@ -10,6 +10,7 @@ import {
   ChevronsUpDown,
   CornerDownLeft,
   ExternalLink,
+  FileText,
   FolderTree,
   Gem,
   Headset,
@@ -66,6 +67,7 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/inventory", label: "Nhập kho", title: "Nhập kho & giá vốn", icon: Warehouse, adminOnly: true, parent: "/products" },
   { href: "/support", label: "Hỗ trợ khách", title: "Hỗ trợ khách hàng", icon: Headset, adminOnly: false, section: "Khách hàng" },
   { href: "/chatbot", label: "Huấn luyện chatbot", title: "Huấn luyện chatbot", icon: Bot, adminOnly: false, section: "Khách hàng" },
+  { href: "/reports", label: "Báo cáo", title: "Báo cáo", icon: FileText, adminOnly: false, section: "Quản trị" },
   { href: "/statistics", label: "Thống kê", title: "Thống kê báo cáo", icon: BarChart3, adminOnly: true, section: "Quản trị" },
   { href: "/users", label: "Người dùng", title: "Quản lý người dùng", icon: Users, adminOnly: true, section: "Quản trị" },
 ];

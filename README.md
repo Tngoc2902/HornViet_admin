@@ -70,6 +70,7 @@ nên **không** đặt bí mật vào đây.
 | `/chatbot` | Huấn luyện chatbot: ý định và câu mẫu, huấn luyện lại model, xem độ chính xác, gán nhãn câu bot chưa hiểu | Nhân viên, Quản trị viên |
 | `/users` | Người dùng: tạo tài khoản, đổi vai trò, khóa / mở khóa, đặt lại mật khẩu | Quản trị viên |
 | `/inventory` | Nhập kho & giá vốn: giá vốn bình quân, giá trị tồn, lãi / sản phẩm; nút **+ Nhập hàng** (đầu trang: chọn sản phẩm; hoặc trên từng dòng), xem trước giá vốn mới; sửa / hủy phiếu mới nhất | Quản trị viên |
+| `/reports` | Báo cáo dựng sẵn theo danh mục (Doanh số, Lợi nhuận, Đơn hàng, Hàng tồn kho): tìm kiếm, ghim, "xem lần cuối" (lưu ở trình duyệt theo tài khoản); mở một báo cáo (`?r=<mã>`) để chọn kỳ và cách nhóm ngày / tháng, xem ô tóm tắt, biểu đồ, bảng số liệu có dòng tổng, sắp xếp cột và xuất CSV. Chỉ có số liệu tổng hợp, không có thông tin cá nhân của khách | Nhân viên (4 báo cáo đơn hàng / sắp hết hàng), Quản trị viên (đủ 12 báo cáo) |
 | `/statistics` | Thống kê doanh thu, giá vốn hàng bán, lợi nhuận gộp, tỷ suất lợi nhuận, sản phẩm bán chạy; xuất báo cáo Excel (không ghi thông tin cá nhân của khách) | Quản trị viên |
 
 Trang chỉ dành cho Quản trị viên khai báo ở `lib/hsv/admin-routes.ts`: Nhân viên không thấy trên menu và bị chuyển về Tổng quan.
@@ -77,7 +78,9 @@ Trang chỉ dành cho Quản trị viên khai báo ở `lib/hsv/admin-routes.ts`
 Mục **Đổi mật khẩu** trong menu tài khoản ở cuối thanh bên (mọi tài khoản quản trị): đổi xong mọi phiên của tài khoản bị đăng xuất, kể cả phiên hiện tại.
 Trang quản trị không có chức năng tự quên mật khẩu (chỉ trang cửa hàng có, bằng mã xác nhận qua email): Nhân viên quên mật khẩu thì
 Quản trị viên đặt lại ở trang Người dùng; tài khoản Quản trị viên và Nhân viên cũng không nhận được mã đặt lại từ backend.
-Tổng quan, Thống kê và Nhập kho lấy giá vốn / lợi nhuận trực tiếp từ backend (API `Statistic`, `StockReceipt`); thiếu dữ liệu thì hiện "—".
+Tổng quan, Báo cáo, Thống kê và Nhập kho lấy giá vốn / lợi nhuận trực tiếp từ backend (API `Statistic`, `StockReceipt`); thiếu dữ liệu thì hiện "—".
+Mỗi báo cáo là một định nghĩa trong `components/hsv/reports.ts` (tên, danh mục, quyền, hàm tính số liệu từ API sẵn có); thêm báo cáo mới = thêm một mục vào mảng `REPORTS`.
+Các danh sách dài phân trang 50 dòng một trang.
 
 ## Cấu trúc
 
