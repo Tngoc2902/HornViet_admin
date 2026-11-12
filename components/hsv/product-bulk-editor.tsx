@@ -1,7 +1,8 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { AlertCircle, Check, ChevronDown, ChevronsUpDown, ChevronUp } from "lucide-react";
 import { useConfirm } from "@/components/hsv/confirm-provider";
 import { Badge, DetailPage, EmptyState, FormAlert, LoadingRows, notify, ProductImage, SaveBar } from "@/components/hsv/ui";
 import { useCatalog } from "@/contexts/catalog-context";
@@ -148,6 +149,184 @@ async function settleAll<T, R>(items: T[], limit: number, fn: (x: T) => Promise<
 /** Ô đã sửa (chưa lưu): nền vàng nhạt, để không lẫn với vùng đang chọn (xanh). */
 const CHANGED = "bg-[#fff5d1]";
 
+type PickerOption = { value: string; label: string };
+const STATUS_OPTIONS: PickerOption[] = [
+  { value: "on", label: "Đang bán" },
+  { value: "off", label: "Tạm ẩn" },
+];
+
+/**
+ * Ô có danh sách chọn, tách làm hai phần như Shopify:
+ * - thân ô: bấm = chọn ô (viền xanh), kéo = bôi đen nhiều ô — KHÔNG đổi giá trị;
+ * - nút ⇕ bên phải (hoặc Enter / Space / Alt + ↓ / bấm đúp): mở danh sách. Chọn một mục khi đang bôi đen nhiều ô
+ *   thì cả vùng nhận cùng giá trị.
+ */
+function PickerCell({
+  cellProps,
+  open,
+  label,
+  value,
+  options,
+  display,
+  disabled,
+  onOpen,
+  onTrigger,
+  onClose,
+  onPick,
+}: {
+  cellProps: Record<string, unknown> & { onKeyDown: (e: React.KeyboardEvent) => void };
+  open: boolean;
+  label: string;
+  value: string;
+  options: PickerOption[];
+  display: ReactNode;
+  disabled: boolean;
+  onOpen: () => void;
+  onTrigger: () => void;
+  onClose: (refocus: boolean) => void;
+  onPick: (value: string) => void;
+}) {
+  const boxRef = useRef<HTMLDivElement>(null);
+  return (
+    <>
+      <div
+        {...cellProps}
+        ref={boxRef}
+        tabIndex={disabled ? -1 : 0}
+        role="combobox"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={label}
+        aria-disabled={disabled || undefined}
+        onDoubleClick={() => !disabled && onOpen()}
+        onKeyDown={(e) => {
+          if (!disabled && (e.key === "Enter" || e.key === " " || e.key === "F2" || (e.altKey && e.key === "ArrowDown"))) {
+            e.preventDefault();
+            onOpen();
+            return;
+          }
+          cellProps.onKeyDown(e);
+        }}
+        className="flex h-[34px] cursor-default items-center gap-1 pl-3 pr-1 outline-none focus:shadow-[inset_0_0_0_2px_#005bd3]"
+      >
+        <span className="flex min-w-0 flex-1">{display}</span>
+        <button
+          type="button"
+          tabIndex={-1}
+          disabled={disabled}
+          aria-label={`Mở danh sách: ${label}`}
+          // Không để thân ô nhận cú bấm này (bấm thân ô là chọn / kéo bôi đen).
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            if (e.button === 0) onTrigger();
+          }}
+          className={cn(
+            "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#4a4a4a] transition-colors hover:bg-surface-active disabled:opacity-40",
+            open && "bg-surface-active"
+          )}
+        >
+          <ChevronsUpDown className="h-4 w-4" />
+        </button>
+      </div>
+      {open && boxRef.current && <PickerMenu anchor={boxRef.current} label={label} value={value} options={options} onPick={onPick} onClose={onClose} />}
+    </>
+  );
+}
+
+/** Danh sách sổ xuống của PickerCell (vẽ ở lớp trên cùng để không bị khung cuộn của bảng cắt mất). */
+function PickerMenu({
+  anchor,
+  label,
+  value,
+  options,
+  onPick,
+  onClose,
+}: {
+  anchor: HTMLElement;
+  label: string;
+  value: string;
+  options: PickerOption[];
+  onPick: (value: string) => void;
+  onClose: (refocus: boolean) => void;
+}) {
+  const listRef = useRef<HTMLDivElement>(null);
+  const [hot, setHot] = useState(() => Math.max(0, options.findIndex((o) => o.value === value)));
+  const rect = anchor.getBoundingClientRect();
+  const height = Math.min(280, options.length * 34 + 12);
+  const below = window.innerHeight - rect.bottom;
+  const place: React.CSSProperties =
+    below < height + 8 && rect.top > below ? { bottom: window.innerHeight - rect.top + 4 } : { top: rect.bottom + 4 };
+
+  useEffect(() => {
+    listRef.current?.focus();
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!listRef.current?.contains(t) && !anchor.contains(t)) onClose(false);
+    };
+    const onScroll = (e: Event) => {
+      if (!listRef.current?.contains(e.target as Node)) onClose(false);
+    };
+    const onResize = () => onClose(false);
+    document.addEventListener("mousedown", onDown);
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onResize);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onResize);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    listRef.current?.querySelector(`[data-index="${hot}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [hot]);
+
+  return createPortal(
+    <div
+      ref={listRef}
+      data-bulk-menu
+      role="listbox"
+      tabIndex={-1}
+      aria-label={label}
+      aria-activedescendant={`hsv-bulk-opt-${hot}`}
+      onKeyDown={(e) => {
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          e.preventDefault();
+          setHot((h) => Math.min(options.length - 1, Math.max(0, h + (e.key === "ArrowDown" ? 1 : -1))));
+        } else if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          if (options[hot]) onPick(options[hot].value);
+        } else if (e.key === "Escape" || e.key === "Tab") {
+          e.preventDefault();
+          onClose(true);
+        }
+      }}
+      style={{ position: "fixed", left: rect.left + 4, minWidth: Math.max(rect.width - 8, 160), maxHeight: height, ...place }}
+      className="z-[70] overflow-auto rounded-xl bg-white p-1.5 text-[13px] text-ink shadow-dropdown outline-none"
+    >
+      {options.map((o, i) => (
+        <div
+          key={o.value}
+          id={`hsv-bulk-opt-${i}`}
+          data-index={i}
+          role="option"
+          aria-selected={o.value === value}
+          onMouseEnter={() => setHot(i)}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => onPick(o.value)}
+          className={cn("flex h-8 cursor-pointer items-center gap-3 rounded-lg px-2.5", i === hot && "bg-surface-active", o.value === value && "font-semibold")}
+        >
+          <span className="min-w-0 flex-1 truncate">{o.label}</span>
+          {o.value === value && <Check className="h-4 w-4 shrink-0" />}
+        </div>
+      ))}
+    </div>,
+    document.body
+  );
+}
+
 /** Cột sửa được. "stock" là tồn kho của một biến thể (sản phẩm một biến thể: ngay dòng sản phẩm). */
 type Col = Field | "stock";
 type Cell = { col: Col; productId: number; variantId?: number };
@@ -191,7 +370,13 @@ export function ProductBulkEditor({ ids, onClose, onSaved }: { ids: number[]; on
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   // Vùng đang bôi đen: luôn nằm trong một cột, từ ô neo (anchor) tới ô đang kéo tới (focus).
   const [sel, setSel] = useState<{ col: Col; anchor: string; focus: string } | null>(null);
+  // Ô đang được sửa / đang có con trỏ (trong vùng bôi đen thì ô này nền trắng, các ô khác nền xanh).
+  const [active, setActive] = useState<string | null>(null);
+  // Ô có danh sách chọn đang mở (Trạng thái / Danh mục / Nguyên liệu) — mỗi lúc chỉ một.
+  const [menu, setMenu] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  // Ô bắt đầu kéo chuột: chỉ khi chuột đi sang ô khác (cùng cột) mới bôi đen vùng mới từ ô này.
+  const dragFrom = useRef<{ key: string; col: Col } | null>(null);
   const tableRef = useRef<HTMLTableElement>(null);
   // Ô chữ / số vừa nhận focus bằng chuột (để nhả chuột không làm mất phần chữ đã bôi đen).
   const justFocused = useRef(false);
@@ -219,11 +404,15 @@ export function ProductBulkEditor({ ids, onClose, onSaved }: { ids: number[]; on
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idKey]);
 
-  // Thả chuột ở bất kỳ đâu → kết thúc kéo. Bấm ra ngoài bảng → bỏ vùng đang bôi đen.
+  // Thả chuột ở bất kỳ đâu → kết thúc kéo. Bấm ra ngoài bảng (và ngoài danh sách chọn đang mở) → bỏ vùng đang bôi đen.
   useEffect(() => {
-    const onUp = () => setDragging(false);
+    const onUp = () => {
+      setDragging(false);
+      dragFrom.current = null;
+    };
     const onDown = (e: MouseEvent) => {
-      if (!tableRef.current?.contains(e.target as Node)) setSel(null);
+      const t = e.target as Element;
+      if (!tableRef.current?.contains(t) && !t.closest?.("[data-bulk-menu]")) setSel(null);
     };
     window.addEventListener("mouseup", onUp);
     document.addEventListener("mousedown", onDown);
@@ -270,54 +459,56 @@ export function ProductBulkEditor({ ids, onClose, onSaved }: { ids: number[]; on
   };
 
   const focusCell = (key: string) => {
-    const el = tableRef.current?.querySelector<HTMLInputElement | HTMLSelectElement>(`[data-cell="${key}"]`);
+    const el = tableRef.current?.querySelector<HTMLElement>(`[data-cell="${key}"]`);
     el?.focus();
     if (el instanceof HTMLInputElement) el.select();
   };
 
-  /** Chuột / bàn phím trên một ô: bấm = chọn ô, kéo = bôi đen dọc cột, Shift + bấm = nới vùng tới ô này. */
+  /**
+   * Chuột / bàn phím trên một ô: bấm = chọn ô, kéo = bôi đen dọc cột, Shift + bấm = nới vùng tới ô này.
+   * Bấm vào một ô nằm trong vùng đang bôi đen thì GIỮ vùng — để bôi đen xong bấm vào ô đầu và sửa là cả vùng đổi theo.
+   */
   const cellProps = (cell: Cell) => {
     const key = keyOf(cell);
     return {
       onMouseDown: (e: React.MouseEvent) => {
         if (e.button !== 0 || progress) return;
-        // Ô chọn (select) mở danh sách ngay khi nhấn chuột → chặn lại để kéo được; bấm rồi thả tại chỗ thì mở danh sách sau (onMouseUp).
-        if (e.target instanceof HTMLSelectElement) {
-          e.preventDefault();
-          e.target.focus();
-        }
         if (e.shiftKey && sel?.col === cell.col) {
           e.preventDefault();
           setSel({ ...sel, focus: key });
           return;
         }
-        setSel({ col: cell.col, anchor: key, focus: key });
+        dragFrom.current = { key, col: cell.col };
+        // Bấm một lần vào ô chữ / số (kể cả ô đang có con trỏ): nhả chuột thì bôi đen cả nội dung để gõ là đè cả ô như Excel.
+        // Bấm đúp (e.detail = 2) thì để trình duyệt đặt con trỏ, sửa giữa chừng được.
+        justFocused.current = e.target instanceof HTMLInputElement && e.detail === 1;
+        if (!(multi && rangeKeys.has(key))) setSel({ col: cell.col, anchor: key, focus: key });
         setDragging(true);
       },
       onMouseEnter: () => {
-        if (dragging) setSel((s) => (s && s.col === cell.col ? { ...s, focus: key } : s));
+        const from = dragFrom.current;
+        if (!dragging || !from || from.col !== cell.col || from.key === key) return;
+        setSel({ col: cell.col, anchor: from.key, focus: key });
       },
       onMouseUp: (e: React.MouseEvent) => {
-        // Vừa bấm vào ô chữ / số: giữ nguyên phần chữ đã bôi đen (onFocus) để gõ là đè cả ô như Excel.
-        if (e.target instanceof HTMLInputElement && justFocused.current) e.preventDefault();
-        justFocused.current = false;
-        // Bấm rồi thả trên đúng ô chọn đã nhấn (không kéo) → mở danh sách như bình thường.
-        if (e.target instanceof HTMLSelectElement && sel?.anchor === key && sel.focus === key && !e.shiftKey) {
-          try {
-            e.target.showPicker();
-          } catch {
-            /* trình duyệt không hỗ trợ: vẫn chọn được bằng bàn phím (↑/↓, Alt + ↓) */
-          }
+        const from = dragFrom.current;
+        if (from && from.key !== key) {
+          // Vừa kéo bôi đen từ ô `from` sang ô này: đưa con trỏ về ô bắt đầu kéo, nội dung bôi đen sẵn → gõ là cả vùng đổi.
+          justFocused.current = false;
+          focusCell(from.key);
+          return;
         }
+        if (e.target instanceof HTMLInputElement && justFocused.current) {
+          e.preventDefault();
+          e.target.select();
+        }
+        justFocused.current = false;
       },
       onKeyDown: (e: React.KeyboardEvent) => {
         const list = columns[cell.col];
         const i = list.findIndex((c) => keyOf(c) === key);
         if (e.key === "Escape") return setSel(null);
         if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
-        const isSelect = e.target instanceof HTMLSelectElement;
-        // ↑/↓ trong ô chọn dùng để đổi giá trị; chỉ Shift + ↑/↓ mới nới vùng.
-        if (isSelect && !e.shiftKey) return;
         e.preventDefault();
         if (e.shiftKey) {
           // Nới vùng từ ô neo theo hướng mũi tên (vùng vẫn trong cùng cột).
@@ -327,18 +518,19 @@ export function ProductBulkEditor({ ids, onClose, onSaved }: { ids: number[]; on
           setSel({ ...s, focus: keyOf(next) });
           return;
         }
-        // ↑/↓ trong ô chữ / số: sang ô trên / dưới cùng cột như Excel.
+        // ↑/↓: sang ô trên / dưới cùng cột như Excel.
         const next = list[i + (e.key === "ArrowDown" ? 1 : -1)];
         if (!next) return;
         setSel({ col: cell.col, anchor: keyOf(next), focus: keyOf(next) });
         focusCell(keyOf(next));
       },
       onFocus: (e: React.FocusEvent) => {
-        // Như Excel: vào một ô thì bôi đen cả nội dung — gõ là thay cả ô; bấm đúp để đặt con trỏ sửa giữa chừng.
+        // Như Excel: vào một ô chữ / số thì bôi đen cả nội dung — gõ là thay cả ô.
         if (e.target instanceof HTMLInputElement) {
           e.target.select();
           justFocused.current = true;
         }
+        setActive(key);
         // Đi tới ô bằng Tab / chuột: nếu ô không nằm trong vùng đang bôi đen thì chọn riêng ô đó.
         if (!rangeKeys.has(key)) setSel({ col: cell.col, anchor: key, focus: key });
       },
@@ -346,7 +538,37 @@ export function ProductBulkEditor({ ids, onClose, onSaved }: { ids: number[]; on
     };
   };
 
-  /** Viền + nền xanh cho vùng đang bôi đen (≥ 2 ô); ô neo đậm hơn. */
+  /** Ô có danh sách chọn: ô (bấm = chọn ô, kéo = bôi đen) tách riêng nút ⇕ (bấm = mở danh sách). */
+  const pickerProps = (cell: Cell, label: string, value: string, options: PickerOption[], display: ReactNode) => {
+    const key = keyOf(cell);
+    return {
+      cellProps: cellProps(cell),
+      open: menu === key,
+      label,
+      value,
+      options,
+      display,
+      disabled: saving,
+      onOpen: () => setMenu(key),
+      onTrigger: () => {
+        // Bấm nút ⇕ của một ô ngoài vùng đang bôi đen → chọn riêng ô đó; trong vùng thì giữ nguyên vùng.
+        if (!(multi && rangeKeys.has(key))) setSel({ col: cell.col, anchor: key, focus: key });
+        focusCell(key);
+        setMenu((m) => (m === key ? null : key));
+      },
+      onClose: (refocus: boolean) => {
+        setMenu((m) => (m === key ? null : m));
+        if (refocus) focusCell(key);
+      },
+      onPick: (v: string) => {
+        setCell(cell, v);
+        setMenu(null);
+        focusCell(key);
+      },
+    };
+  };
+
+  /** Viền + nền xanh cho vùng đang bôi đen (≥ 2 ô); ô đang sửa nền trắng. */
   const selStyle = (cell: Cell): React.CSSProperties | undefined => {
     if (!multi) return undefined;
     const i = range.findIndex((c) => keyOf(c) === keyOf(cell));
@@ -354,7 +576,8 @@ export function ProductBulkEditor({ ids, onClose, onSaved }: { ids: number[]; on
     const edges = ["inset 2px 0 0 #005bd3", "inset -2px 0 0 #005bd3"];
     if (i === 0) edges.push("inset 0 2px 0 #005bd3");
     if (i === range.length - 1) edges.push("inset 0 -2px 0 #005bd3");
-    return { boxShadow: edges.join(","), background: keyOf(cell) === sel?.anchor ? "#ffffff" : "#e0f0ff" };
+    const current = active && rangeKeys.has(active) ? active : sel?.anchor;
+    return { boxShadow: edges.join(","), background: keyOf(cell) === current ? "#ffffff" : "#e0f0ff" };
   };
   const tdFor = (cell: Cell, changed: boolean, extra?: string) => ({
     className: cn(TD, changed && CHANGED, extra),
@@ -476,7 +699,7 @@ export function ProductBulkEditor({ ids, onClose, onSaved }: { ids: number[]; on
                 <span className="text-muted2">— sửa một ô trong vùng thì cả {range.length} ô nhận cùng giá trị. Esc hoặc bấm ra ngoài bảng để bỏ chọn.</span>
               </>
             ) : (
-              <span className="text-muted2">Như Excel: kéo chuột dọc một cột (hoặc Shift + bấm, Shift + ↑/↓) để bôi đen nhiều ô, rồi sửa ô đầu — các ô đã bôi đen nhận cùng giá trị.</span>
+              <span className="text-muted2">Như Excel: kéo chuột dọc một cột (hoặc Shift + bấm, Shift + ↑/↓) để bôi đen nhiều ô, rồi sửa ô đầu — các ô đã bôi đen nhận cùng giá trị. Trạng thái, danh mục, nguyên liệu: bấm nút ⇕ ở bên phải ô để mở danh sách.</span>
             )}
           </p>
           <div className="max-h-[calc(100vh-210px)] min-h-[240px] overflow-auto rounded-xl border border-[#e3e3e3] bg-white">
@@ -554,67 +777,44 @@ export function ProductBulkEditor({ ids, onClose, onSaved }: { ids: number[]; on
                           </div>
                         </td>
                         <td {...tdFor(c("isActive"), fieldChanged(r, b, "isActive"))}>
-                          {/* Chữ của ô chọn được ẩn đi, phía trên hiện nhãn màu của trạng thái đang chọn. */}
-                          <div className="relative">
-                            <select
-                              {...cellProps(c("isActive"))}
-                              value={r.isActive ? "on" : "off"}
-                              onChange={(e) => setCell(c("isActive"), e.target.value)}
-                              disabled={saving}
-                              aria-label={`Trạng thái của ${b.name}`}
-                              className="hsv-cell text-transparent"
-                            >
-                              <option value="on" className="text-ink">
-                                Đang bán
-                              </option>
-                              <option value="off" className="text-ink">
-                                Tạm ẩn
-                              </option>
-                            </select>
-                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
+                          <PickerCell
+                            {...pickerProps(
+                              c("isActive"),
+                              `Trạng thái của ${b.name}`,
+                              r.isActive ? "on" : "off",
+                              STATUS_OPTIONS,
                               <Badge tone={r.isActive ? "ok" : "neutral"}>{r.isActive ? "Đang bán" : "Tạm ẩn"}</Badge>
-                            </span>
-                          </div>
+                            )}
+                          />
                         </td>
                         <td {...tdFor(c("categoryId"), fieldChanged(r, b, "categoryId"))}>
-                          <div className="relative">
-                            <select
-                              {...cellProps(c("categoryId"))}
-                              value={r.categoryId}
-                              onChange={(e) => setCell(c("categoryId"), e.target.value)}
-                              disabled={saving}
-                              aria-label={`Danh mục của ${b.name}`}
-                              className="hsv-cell text-transparent"
-                            >
-                              {catOptions.map((o) => (
-                                <option key={o.id} value={o.id} className="text-ink">
-                                  {o.name}
-                                </option>
-                              ))}
-                            </select>
-                            <span className="pointer-events-none absolute left-2.5 right-8 top-1/2 flex -translate-y-1/2">
+                          <PickerCell
+                            {...pickerProps(
+                              c("categoryId"),
+                              `Danh mục của ${b.name}`,
+                              String(r.categoryId),
+                              catOptions.map((o) => ({ value: String(o.id), label: o.name })),
                               <span className="truncate rounded-md border border-dashed border-[#b9a6f2] bg-[#efe9ff] px-1.5 py-px text-[13px] text-[#3d2196]">
                                 {catOptions.find((o) => o.id === r.categoryId)?.name ?? "—"}
                               </span>
-                            </span>
-                          </div>
+                            )}
+                          />
                         </td>
                         <td {...tdFor(c("materialId"), fieldChanged(r, b, "materialId"))}>
-                          <select
-                            {...cellProps(c("materialId"))}
-                            value={r.materialId ?? ""}
-                            onChange={(e) => setCell(c("materialId"), e.target.value)}
-                            disabled={saving}
-                            aria-label={`Nguyên liệu của ${b.name}`}
-                            className="hsv-cell"
-                          >
-                            {r.materialId === null && <option value="">— Chọn nguyên liệu —</option>}
-                            {matOptions.map((m) => (
-                              <option key={m.id} value={m.id}>
-                                {m.name}
-                              </option>
-                            ))}
-                          </select>
+                          <PickerCell
+                            {...pickerProps(
+                              c("materialId"),
+                              `Nguyên liệu của ${b.name}`,
+                              r.materialId === null ? "" : String(r.materialId),
+                              [
+                                ...(r.materialId === null ? [{ value: "", label: "— Chọn nguyên liệu —" }] : []),
+                                ...matOptions.map((m) => ({ value: String(m.id), label: m.name })),
+                              ],
+                              <span className={cn("truncate", r.materialId === null && "text-faint")}>
+                                {matOptions.find((m) => m.id === r.materialId)?.name ?? "— Chọn nguyên liệu —"}
+                              </span>
+                            )}
+                          />
                         </td>
                         <td {...tdFor(c("price"), fieldChanged(r, b, "price"))}>
                           <input
