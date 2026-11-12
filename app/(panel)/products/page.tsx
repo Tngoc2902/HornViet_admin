@@ -73,7 +73,9 @@ export default function AdminProducts() {
         skipCount: (page - 1) * PAGE_SIZE,
         maxResultCount: PAGE_SIZE,
       }),
-    [keyword, cat, status, lowOnly, page]
+    [keyword, cat, status, lowOnly, page],
+    // Bảng chỉnh sửa hàng loạt đang che danh sách → không tải danh sách; đóng bảng thì tự tải lại.
+    bulkIds.length === 0
   );
   useRealtimeRefresh(["StockChanged", "ProductChanged"], () => list.reload());
   const rows = list.data?.items ?? [];

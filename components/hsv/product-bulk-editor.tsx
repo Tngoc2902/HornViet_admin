@@ -62,6 +62,25 @@ function validate(r: Row): string | null {
   return null;
 }
 
+/**
+ * Ghép các ô người dùng đã sửa (so với `b`, giá trị lúc mở) vào bản mới nhất của máy chủ (`fresh`, đọc ngay trước khi lưu).
+ * Ô không sửa lấy theo máy chủ — đặc biệt tồn kho: đơn hàng / nhập kho phát sinh trong lúc đang sửa không bị ghi đè bằng số cũ.
+ */
+function mergeIntoFresh(r: Row, b: Row, fresh: ProductDetail): Row {
+  const f = toRow(fresh);
+  const pick = <K extends Field>(k: K): Row[K] => (fieldChanged(r, b, k) ? r[k] : f[k]);
+  const stocks = { ...f.stocks };
+  for (const key of Object.keys(r.stocks)) {
+    const variantId = Number(key);
+    // Biến thể đã bị xóa ở nơi khác thì bỏ qua.
+    if (variantId in stocks && stockChanged(r, b, variantId)) stocks[variantId] = r.stocks[variantId];
+  }
+  return { ...f, name: pick("name"), isActive: pick("isActive"), categoryId: pick("categoryId"), materialId: pick("materialId"), price: pick("price"), stocks };
+}
+
+/** Bỏ số 0 thừa ở đầu ("070" → "70") để gõ lại cùng giá trị không bị tính là đã sửa. */
+const digits = (v: string) => v.replace(/[^\d]/g, "").replace(/^0+(?=\d)/, "");
+
 /** Dữ liệu gửi Product/Update: giống hệt form sản phẩm, chỉ thay các ô đã sửa; ảnh, mô tả và biến thể giữ nguyên. */
 function toInput(r: Row): ProductInput {
   const d = r.detail;
@@ -133,7 +152,7 @@ export function ProductBulkEditor({ ids, onClose, onSaved }: { ids: number[]; on
     setRows((rs) => rs && rs.map((r) => (r.id === id ? { ...r, ...change } : r)));
     setErrors((e) => (e[id] ? { ...e, [id]: "" } : e));
   };
-  const setStock = (r: Row, variantId: number, value: string) => patch(r.id, { stocks: { ...r.stocks, [variantId]: value.replace(/[^\d]/g, "") } });
+  const setStock = (r: Row, variantId: number, value: string) => patch(r.id, { stocks: { ...r.stocks, [variantId]: digits(value) } });
 
   const dirtyRows = (rows ?? []).filter((r) => isDirty(r, base[r.id]));
   const saving = progress !== null;
@@ -161,9 +180,13 @@ export function ProductBulkEditor({ ids, onClose, onSaved }: { ids: number[]; on
           await productApi.setActive(r.id, r.isActive);
           next = { ...r, detail: { ...r.detail, isActive: r.isActive } };
         } else {
-          const updated = await productApi.update(toInput(r));
+          // Đọc lại sản phẩm ngay trước khi lưu rồi chỉ thay các ô đã sửa, để không ghi đè thay đổi phát sinh từ lúc mở bảng.
+          const merged = mergeIntoFresh(r, base[r.id], await productApi.get(r.id));
+          const problem = validate(merged);
+          if (problem) throw new Error(problem);
+          const updated = await productApi.update(toInput(merged));
           // Máy chủ trả sản phẩm sau khi lưu → lấy làm dữ liệu gốc mới của dòng.
-          next = updated ? toRow(updated) : { ...r, name: r.name.trim() };
+          next = updated ? toRow(updated) : { ...merged, name: merged.name.trim() };
         }
         ok++;
         setRows((rs) => rs && rs.map((x) => (x.id === r.id ? next : x)));
@@ -181,6 +204,8 @@ export function ProductBulkEditor({ ids, onClose, onSaved }: { ids: number[]; on
   };
 
   const leave = async () => {
+    // Đang lưu thì chờ xong mới rời trang, để kết quả và lỗi của từng sản phẩm còn được báo lại.
+    if (saving) return notify("Đang lưu — chờ lưu xong rồi hãy rời trang");
     if (dirtyRows.length && !(await confirm({ ...LEAVE_CONFIRM, body: `Thay đổi chưa lưu của ${dirtyRows.length} sản phẩm sẽ bị bỏ.` }))) return;
     onClose();
   };
@@ -250,6 +275,10 @@ export function ProductBulkEditor({ ids, onClose, onSaved }: { ids: number[]; on
                 const catOptions = categories.some((c) => c.id === r.detail.categoryId)
                   ? categories
                   : [...categories, { id: r.detail.categoryId, name: r.detail.categoryName, description: null, productCount: 0, creationTime: "" }];
+                // Nguyên liệu hiện tại đã bị xóa mềm → vẫn hiện đúng tên thay vì để ô chọn hiển thị nhầm nguyên liệu đầu tiên.
+                const curMaterial = r.detail.material;
+                const matOptions =
+                  curMaterial && r.materialId === curMaterial.id && !materials.some((m) => m.id === curMaterial.id) ? [...materials, curMaterial] : materials;
                 return (
                   <Fragment key={r.id}>
                     <tr className={cn(errors[r.id] && "bg-danger-soft/40")}>
@@ -322,7 +351,7 @@ export function ProductBulkEditor({ ids, onClose, onSaved }: { ids: number[]; on
                           className="hsv-cell"
                         >
                           {r.materialId === null && <option value="">— Chọn nguyên liệu —</option>}
-                          {materials.map((m) => (
+                          {matOptions.map((m) => (
                             <option key={m.id} value={m.id}>
                               {m.name}
                             </option>
@@ -333,7 +362,7 @@ export function ProductBulkEditor({ ids, onClose, onSaved }: { ids: number[]; on
                         <input
                           value={r.price}
                           inputMode="numeric"
-                          onChange={(e) => patch(r.id, { price: e.target.value.replace(/[^\d]/g, "") })}
+                          onChange={(e) => patch(r.id, { price: digits(e.target.value) })}
                           disabled={saving}
                           aria-label={`Giá bán của ${b.name}`}
                           title={r.price ? formatVND(Number(r.price)) : undefined}
