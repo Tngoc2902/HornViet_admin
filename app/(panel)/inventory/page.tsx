@@ -13,7 +13,7 @@ import { formatDateTime, formatVND } from "@/lib/hsv/format";
 import type { FieldErrors } from "@/lib/hsv/validation";
 import { cn } from "@/lib/utils";
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 50;
 const COST_COLS = "grid-cols-[minmax(0,2fr)_90px_110px_120px_130px_110px_120px]";
 const RECEIPT_COLS = "grid-cols-[130px_minmax(0,2fr)_80px_110px_120px_minmax(0,1.2fr)_120px]";
 

@@ -320,7 +320,7 @@ function IntentsTab({ list, error, reload, onChanged }: { list: ChatIntent[] | u
 
 // ------------------------------------------------------------------ Câu bot chưa hiểu
 
-const REVIEW_PAGE = 20;
+const REVIEW_PAGE = 50;
 
 function ReviewTab({ intents, onLabeled }: { intents: ChatIntent[]; onLabeled: () => void }) {
   const [page, setPage] = useState(1);

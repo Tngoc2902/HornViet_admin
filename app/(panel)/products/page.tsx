@@ -18,7 +18,7 @@ import type { ProductAdminListItem } from "@/lib/api/types";
 import { formatVND } from "@/lib/hsv/format";
 import { cn } from "@/lib/utils";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 50;
 /** Số sản phẩm tối đa mở trong một lần chỉnh sửa hàng loạt (cũng là trang lớn nhất API danh sách trả về). */
 const MAX_BULK = 100;
 const COLS = "grid-cols-[16px_minmax(240px,2.4fr)_100px_minmax(150px,1.1fr)_1fr_1fr_110px_140px]";
