@@ -19,6 +19,8 @@ import { formatVND } from "@/lib/hsv/format";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 10;
+/** Số sản phẩm tối đa mở trong một lần chỉnh sửa hàng loạt (cũng là trang lớn nhất API danh sách trả về). */
+const MAX_BULK = 100;
 const COLS = "grid-cols-[16px_minmax(240px,2.4fr)_100px_minmax(150px,1.1fr)_1fr_1fr_110px_140px]";
 const DELETE_NOTE =
   "Sản phẩm được xóa mềm: biến mất khỏi cửa hàng và trang quản trị, được gỡ khỏi giỏ hàng của khách; lịch sử đơn và thống kê giữ nguyên.";
@@ -42,16 +44,17 @@ export default function AdminProducts() {
   const [status, setStatus] = useState<(typeof STATUS)[number]["key"]>("all");
   const [page, setPage] = useState(1);
   const [busyId, setBusyId] = useState<number | null>(null);
-  // Chọn nhiều dòng để thao tác hàng loạt (chỉ trong trang đang xem).
+  // Chọn nhiều dòng để thao tác hàng loạt (trong trang đang xem); `allMatching` = đã bấm "Chọn tất cả N sản phẩm" khớp bộ lọc.
   const [selected, setSelected] = useState<Set<number>>(() => new Set());
+  const [allMatching, setAllMatching] = useState(false);
   const [bulk, setBulk] = useState<{ done: number; total: number } | null>(null);
 
   const editParam = params.get("edit");
   const lowOnly = params.get("warn") === "1";
-  // Các sản phẩm đang mở trong trình chỉnh sửa hàng loạt (tối đa một trang danh sách).
+  // Các sản phẩm đang mở trong trình chỉnh sửa hàng loạt (tối đa MAX_BULK).
   const bulkParam = params.get("bulk") ?? "";
   const bulkIds = useMemo(
-    () => [...new Set(bulkParam.split(",").map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, PAGE_SIZE),
+    () => [...new Set(bulkParam.split(",").map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, MAX_BULK),
     [bulkParam]
   );
 
@@ -63,16 +66,16 @@ export default function AdminProducts() {
     router.replace(s ? `${pathname}?${s}` : pathname, { scroll: false });
   };
 
+  /** Bộ lọc đang áp dụng (dùng chung cho danh sách và cho "Chọn tất cả N sản phẩm"). */
+  const listFilter = () => ({
+    keyword: keyword || undefined,
+    categoryId: cat,
+    isActive: STATUS.find((s) => s.key === status)?.value,
+    lowStockOnly: lowOnly || undefined,
+  });
+
   const list = useApi(
-    () =>
-      productApi.getAdminList({
-        keyword: keyword || undefined,
-        categoryId: cat,
-        isActive: STATUS.find((s) => s.key === status)?.value,
-        lowStockOnly: lowOnly || undefined,
-        skipCount: (page - 1) * PAGE_SIZE,
-        maxResultCount: PAGE_SIZE,
-      }),
+    () => productApi.getAdminList({ ...listFilter(), skipCount: (page - 1) * PAGE_SIZE, maxResultCount: PAGE_SIZE }),
     [keyword, cat, status, lowOnly, page],
     // Bảng chỉnh sửa hàng loạt đang che danh sách → không tải danh sách; đóng bảng thì tự tải lại.
     bulkIds.length === 0
@@ -84,20 +87,60 @@ export default function AdminProducts() {
   // Đổi bộ lọc hoặc sang trang khác → bỏ chọn: thao tác hàng loạt chỉ áp dụng cho các dòng đang thấy.
   useEffect(() => {
     setSelected(new Set());
+    setAllMatching(false);
   }, [keyword, cat, status, lowOnly, page]);
 
   const picked = rows.filter((p) => selected.has(p.id));
   const allPicked = rows.length > 0 && picked.length === rows.length;
+  const total = list.data?.totalCount ?? 0;
+  const pickedAll = allMatching && allPicked;
   const locked = bulk !== null;
 
-  const toggleOne = (id: number) =>
+  const toggleOne = (id: number) => {
+    setAllMatching(false);
     setSelected((s) => {
       const next = new Set(s);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  const toggleAll = () => setSelected(allPicked ? new Set() : new Set(rows.map((p) => p.id)));
+  };
+  const toggleAll = () => {
+    setAllMatching(false);
+    setSelected(allPicked ? new Set() : new Set(rows.map((p) => p.id)));
+  };
+  const clearSelection = () => {
+    setAllMatching(false);
+    setSelected(new Set());
+  };
+
+  /** Mọi sản phẩm khớp bộ lọc hiện tại (đọc lần lượt từng trang 100 dòng). */
+  const fetchMatching = async () => {
+    const all: ProductAdminListItem[] = [];
+    for (;;) {
+      const r = await productApi.getAdminList({ ...listFilter(), skipCount: all.length, maxResultCount: MAX_BULK });
+      all.push(...r.items);
+      if (!r.items.length || all.length >= r.totalCount) return all;
+    }
+  };
+  /** Sản phẩm mà thao tác hàng loạt áp dụng: các dòng đã tích, hoặc mọi sản phẩm khớp bộ lọc. */
+  const bulkTargets = async () => {
+    if (!pickedAll) return picked;
+    try {
+      return await fetchMatching();
+    } catch (e) {
+      notify(toApiError(e).message);
+      return null;
+    }
+  };
+
+  const openBulkEditor = async () => {
+    const targets = await bulkTargets();
+    if (!targets?.length) return;
+    if (targets.length > MAX_BULK) notify(`Mỗi lần sửa được tối đa ${MAX_BULK} sản phẩm — mở ${MAX_BULK} sản phẩm đầu`);
+    clearSelection();
+    setParam("bulk", targets.slice(0, MAX_BULK).map((p) => p.id).join(","));
+  };
 
   const filter = (fn: () => void) => {
     fn();
@@ -145,9 +188,10 @@ export default function AdminProducts() {
       setBulk({ done: ok + failed.length, total: targets.length });
     }
     setBulk(null);
-    setSelected(new Set());
-    // Xóa hết các dòng của trang cuối → lùi một trang để không đứng ở trang trống.
-    if (removes && ok === rows.length && page > 1) setPage(page - 1);
+    const wasAll = pickedAll;
+    clearSelection();
+    // Xóa hết các dòng của trang đang xem → lùi trang để không đứng ở trang trống (xóa tất cả theo bộ lọc → về trang 1).
+    if (removes && page > 1 && (wasAll || ok >= rows.length)) setPage(wasAll ? 1 : page - 1);
     else await list.reload();
     notify(
       failed.length
@@ -157,7 +201,9 @@ export default function AdminProducts() {
   };
 
   const onBulkActive = async (isActive: boolean) => {
-    const targets = picked.filter((p) => p.isActive !== isActive);
+    const pool = await bulkTargets();
+    if (!pool) return;
+    const targets = pool.filter((p) => p.isActive !== isActive);
     if (!targets.length) return notify(isActive ? "Các sản phẩm đã chọn đều đang bán" : "Các sản phẩm đã chọn đều đang tạm ẩn");
     const ok = await confirm({
       title: isActive ? `Hiện ${targets.length} sản phẩm trên cửa hàng?` : `Tạm ẩn ${targets.length} sản phẩm?`,
@@ -169,14 +215,16 @@ export default function AdminProducts() {
   };
 
   const onBulkDelete = async () => {
+    const targets = await bulkTargets();
+    if (!targets?.length) return;
     const ok = await confirm({
-      title: `Xóa ${picked.length} sản phẩm đã chọn?`,
+      title: `Xóa ${targets.length} sản phẩm đã chọn?`,
       body: DELETE_NOTE,
-      okLabel: `Xóa ${picked.length} sản phẩm`,
+      okLabel: `Xóa ${targets.length} sản phẩm`,
       danger: true,
     });
     if (!ok) return;
-    await runBulk(picked, (p) => productApi.delete(p.id), (n) => `Đã xóa ${n} sản phẩm`, true);
+    await runBulk(targets, (p) => productApi.delete(p.id), (n) => `Đã xóa ${n} sản phẩm`, true);
   };
 
   // Đang chỉnh sửa hàng loạt (?bulk=1,2,3): bảng sửa chiếm cả trang.
@@ -250,7 +298,13 @@ export default function AdminProducts() {
                 // Đã chọn dòng: đầu bảng đổi thành thanh thao tác hàng loạt.
                 <div className="hsv-thead flex min-h-8 items-center gap-3 py-1" role="toolbar" aria-label="Thao tác hàng loạt">
                   <Checkbox checked={allPicked} indeterminate onChange={toggleAll} disabled={locked} label={allPicked ? "Bỏ chọn tất cả" : "Chọn tất cả sản phẩm trong trang"} />
-                  <span className="font-semibold text-ink">Đã chọn {picked.length}</span>
+                  <span className="font-semibold text-ink">{pickedAll ? `Đã chọn tất cả ${total}` : `Đã chọn ${picked.length}`}</span>
+                  {/* Như Shopify: tích hết trang này rồi có thể chọn mọi sản phẩm khớp bộ lọc ở các trang khác. */}
+                  {!bulk && allPicked && total > rows.length && (
+                    <button onClick={() => setAllMatching(!pickedAll)} className="hsv-link text-xs">
+                      {pickedAll ? `Chỉ chọn ${rows.length} sản phẩm trong trang này` : `Chọn tất cả ${total} sản phẩm`}
+                    </button>
+                  )}
                   {bulk ? (
                     <span className="flex items-center gap-1.5 text-muted2">
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -258,13 +312,7 @@ export default function AdminProducts() {
                     </span>
                   ) : (
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <button
-                        onClick={() => {
-                          setSelected(new Set());
-                          setParam("bulk", picked.map((p) => p.id).join(","));
-                        }}
-                        className="hsv-btn-secondary hsv-btn-sm"
-                      >
+                      <button onClick={() => void openBulkEditor()} className="hsv-btn-secondary hsv-btn-sm">
                         <PencilLine className="h-3.5 w-3.5" />
                         Chỉnh sửa hàng loạt
                       </button>
@@ -277,7 +325,7 @@ export default function AdminProducts() {
                       <button onClick={onBulkDelete} className="hsv-btn-danger-outline hsv-btn-sm">
                         Xóa sản phẩm
                       </button>
-                      <button onClick={() => setSelected(new Set())} className="hsv-link-muted ml-1 text-xs">
+                      <button onClick={clearSelection} className="hsv-link-muted ml-1 text-xs">
                         Bỏ chọn
                       </button>
                     </div>
