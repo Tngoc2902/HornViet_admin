@@ -63,7 +63,7 @@ nên **không** đặt bí mật vào đây.
 | `/` | Tổng quan | Nhân viên, Quản trị viên |
 | `/categories` | Danh mục | Nhân viên, Quản trị viên |
 | `/materials` | Nguyên liệu & nguồn gốc | Nhân viên, Quản trị viên |
-| `/products` | Sản phẩm: biến thể, tải ảnh lên, ẩn / hiện; chọn nhiều dòng để ẩn / hiện / xóa hàng loạt | Nhân viên, Quản trị viên |
+| `/products` | Sản phẩm: biến thể, tải ảnh lên, ẩn / hiện; chọn nhiều dòng để ẩn / hiện / xóa hoặc chỉnh sửa hàng loạt trong bảng (tên, trạng thái, danh mục, nguyên liệu, giá, tồn kho); dải chỉ số tồn kho 30 ngày (chỉ Quản trị viên) | Nhân viên, Quản trị viên |
 | `/collections` | Bộ sưu tập: nhóm sản phẩm hiện ở mục "Bộ sưu tập" của cửa hàng | Nhân viên, Quản trị viên |
 | `/orders` | Đơn hàng: đổi trạng thái; tạo / hủy vận đơn GHN, in nhãn, theo dõi tiến trình (môi trường thử GHN có nút giả lập trạng thái) | Nhân viên, Quản trị viên |
 | `/support` | Hỗ trợ khách hàng: tiếp nhận và trả lời hội thoại khi khách bấm "Chat với nhân viên" ở cửa hàng | Nhân viên, Quản trị viên |

@@ -247,9 +247,9 @@ function VariantCostsTab({ version, onChanged, tabs }: { version: number; onChan
                 <div key={v.productVariantId} className={cn("hsv-trow grid items-center gap-3", COST_COLS)}>
                   <div className="min-w-0">
                     <p className="truncate font-medium">{v.productName}</p>
-                    <p className="truncate text-xs text-muted2">
-                      {v.variantName}
-                      {v.lastReceiptTime && ` · nhập gần nhất ${formatDateTime(v.lastReceiptTime)}`}
+                    <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted2">
+                      <span className="hsv-pill shrink-0 bg-surface-active px-1.5 py-0 text-[11px] text-ink-2">{v.variantName}</span>
+                      {v.lastReceiptTime && <span className="truncate">nhập gần nhất {formatDateTime(v.lastReceiptTime)}</span>}
                     </p>
                   </div>
                   <span className="text-right">{v.stockQuantity}</span>
@@ -354,9 +354,9 @@ function ReceiptsTab({ version, onChanged, tabs }: { version: number; onChanged:
                   </span>
                   <div className="min-w-0">
                     <p className="truncate font-medium">{r.productName}</p>
-                    <p className="truncate text-xs text-muted2">
-                      {r.variantName}
-                      {r.creatorUserName && ` · ${r.creatorUserName}`}
+                    <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted2">
+                      <span className="hsv-pill shrink-0 bg-surface-active px-1.5 py-0 text-[11px] text-ink-2">{r.variantName}</span>
+                      {r.creatorUserName && <span className="truncate">{r.creatorUserName}</span>}
                     </p>
                   </div>
                   <span className="text-right">{r.quantity}</span>

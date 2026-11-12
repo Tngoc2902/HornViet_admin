@@ -1,11 +1,14 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Loader2, Package, Plus } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Loader2, Package, PencilLine, Plus } from "lucide-react";
 import { useConfirm } from "@/components/hsv/confirm-provider";
+import { ProductBulkEditor } from "@/components/hsv/product-bulk-editor";
 import { ProductForm } from "@/components/hsv/product-form";
+import { ProductInsights } from "@/components/hsv/product-insights";
 import { Badge, Checkbox, Chip, EmptyState, ErrorBox, LoadingRows, notify, PageHeader, Pager, ProductImage, SearchInput } from "@/components/hsv/ui";
+import { useAuth } from "@/contexts/auth-context";
 import { useCatalog } from "@/contexts/catalog-context";
 import { useApi, useDebounced } from "@/hooks/use-api";
 import { useRealtimeRefresh } from "@/hooks/use-realtime";
@@ -28,6 +31,7 @@ const STATUS = [
 
 export default function AdminProducts() {
   const { categories } = useCatalog();
+  const { isAdmin } = useAuth();
   const confirm = useConfirm();
   const router = useRouter();
   const pathname = usePathname();
@@ -44,6 +48,12 @@ export default function AdminProducts() {
 
   const editParam = params.get("edit");
   const lowOnly = params.get("warn") === "1";
+  // Các sản phẩm đang mở trong trình chỉnh sửa hàng loạt (tối đa một trang danh sách).
+  const bulkParam = params.get("bulk") ?? "";
+  const bulkIds = useMemo(
+    () => [...new Set(bulkParam.split(",").map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, PAGE_SIZE),
+    [bulkParam]
+  );
 
   const setParam = (k: string, v: string | null) => {
     const next = new URLSearchParams(params.toString());
@@ -63,7 +73,9 @@ export default function AdminProducts() {
         skipCount: (page - 1) * PAGE_SIZE,
         maxResultCount: PAGE_SIZE,
       }),
-    [keyword, cat, status, lowOnly, page]
+    [keyword, cat, status, lowOnly, page],
+    // Bảng chỉnh sửa hàng loạt đang che danh sách → không tải danh sách; đóng bảng thì tự tải lại.
+    bulkIds.length === 0
   );
   useRealtimeRefresh(["StockChanged", "ProductChanged"], () => list.reload());
   const rows = list.data?.items ?? [];
@@ -167,6 +179,11 @@ export default function AdminProducts() {
     await runBulk(picked, (p) => productApi.delete(p.id), (n) => `Đã xóa ${n} sản phẩm`, true);
   };
 
+  // Đang chỉnh sửa hàng loạt (?bulk=1,2,3): bảng sửa chiếm cả trang.
+  if (bulkIds.length > 0 && !editParam) {
+    return <ProductBulkEditor ids={bulkIds} onClose={() => setParam("bulk", null)} onSaved={() => void list.reload()} />;
+  }
+
   // Đang thêm / sửa: form chiếm cả trang; danh sách vẫn giữ nguyên bộ lọc và trang hiện tại để quay lại.
   if (editParam) {
     return (
@@ -190,6 +207,9 @@ export default function AdminProducts() {
           </button>
         }
       />
+
+      {/* Chỉ số tồn kho dùng API thống kê + giá vốn — chỉ Quản trị viên gọi được. */}
+      {isAdmin && <ProductInsights />}
 
       {list.error && !list.data ? (
         <ErrorBox error={list.error} onRetry={list.reload} />
@@ -238,6 +258,16 @@ export default function AdminProducts() {
                     </span>
                   ) : (
                     <div className="flex flex-wrap items-center gap-1.5">
+                      <button
+                        onClick={() => {
+                          setSelected(new Set());
+                          setParam("bulk", picked.map((p) => p.id).join(","));
+                        }}
+                        className="hsv-btn-secondary hsv-btn-sm"
+                      >
+                        <PencilLine className="h-3.5 w-3.5" />
+                        Chỉnh sửa hàng loạt
+                      </button>
                       <button onClick={() => onBulkActive(true)} className="hsv-btn-secondary hsv-btn-sm">
                         Đặt là Đang bán
                       </button>
