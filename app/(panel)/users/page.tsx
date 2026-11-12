@@ -13,7 +13,7 @@ import { formatDate, initialOf, ROLE_LABEL } from "@/lib/hsv/format";
 import { isStrongPassword, isValidEmail, isValidPhone, normalizePhone, type FieldErrors } from "@/lib/hsv/validation";
 import { cn } from "@/lib/utils";
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 50;
 const COLS = "grid-cols-[minmax(0,1.8fr)_130px_100px_150px_100px_190px]";
 const ROLES: RoleName[] = ["Customer", "Staff", "Admin"];
 

@@ -10,6 +10,7 @@ import {
   ChevronsUpDown,
   CornerDownLeft,
   ExternalLink,
+  FileText,
   FolderTree,
   Gem,
   Headset,
@@ -66,6 +67,7 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/inventory", label: "Nhập kho", title: "Nhập kho & giá vốn", icon: Warehouse, adminOnly: true, parent: "/products" },
   { href: "/support", label: "Hỗ trợ khách", title: "Hỗ trợ khách hàng", icon: Headset, adminOnly: false, section: "Khách hàng" },
   { href: "/chatbot", label: "Huấn luyện chatbot", title: "Huấn luyện chatbot", icon: Bot, adminOnly: false, section: "Khách hàng" },
+  { href: "/reports", label: "Báo cáo", title: "Báo cáo", icon: FileText, adminOnly: false, section: "Quản trị" },
   { href: "/statistics", label: "Thống kê", title: "Thống kê báo cáo", icon: BarChart3, adminOnly: true, section: "Quản trị" },
   { href: "/users", label: "Người dùng", title: "Quản lý người dùng", icon: Users, adminOnly: true, section: "Quản trị" },
 ];
@@ -511,7 +513,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Khung nội dung trắng bo góc, cuộn riêng bên trong khung tối. */}
       <div className="pt-12 lg:py-1 lg:pl-[200px] lg:pr-1">
-        <main ref={mainRef} id="hsv-main" className="min-h-[calc(100vh-3rem)] bg-canvas px-4 pb-16 pt-3 lg:h-[calc(100vh-8px)] lg:min-h-0 lg:overflow-y-auto lg:rounded-xl">
+        {/* relative: phần tử định vị tuyệt đối bên trong (bảng ẩn của biểu đồ, chú giải) nằm gọn trong khung cuộn này, không kéo dài cả trang. */}
+        <main ref={mainRef} id="hsv-main" className="relative min-h-[calc(100vh-3rem)] bg-canvas px-4 pb-16 pt-3 lg:h-[calc(100vh-8px)] lg:min-h-0 lg:overflow-y-auto lg:rounded-xl">
           {/* Trang chỉ dành cho Quản trị viên: không render nội dung trong lúc chuyển về Tổng quan. */}
           {!forbidden && (
             <Suspense>

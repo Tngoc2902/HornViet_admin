@@ -10,10 +10,14 @@ import { cn } from "@/lib/utils";
  * mũi tên hiện giá trị.
  */
 
-/** Màu dữ liệu (đã kiểm tra tương phản và mù màu trên nền trắng): chuỗi chính xanh, chuỗi thứ hai cam, kỳ trước xám. */
+/**
+ * Màu dữ liệu (đã kiểm tra tương phản và mù màu trên nền trắng): chuỗi chính xanh, chuỗi thứ hai cam, thứ ba xanh ngọc,
+ * kỳ trước xám. Xanh ngọc tương phản < 3:1 với nền nên chỉ dùng khi kèm chú thích có số (VD SegmentedBar).
+ */
 export const CHART = {
   primary: "#2a78d6",
   secondary: "#eb6834",
+  tertiary: "#1baf7a",
   previous: "#b5b5b5",
   grid: "#ebebeb",
   axis: "#d4d4d4",
@@ -55,7 +59,8 @@ function xTickIndexes(n: number, width: number, minGap = 64) {
   const idx: number[] = [];
   for (let i = 0; i < n; i += step) idx.push(i);
   if (idx[idx.length - 1] !== n - 1) {
-    if (n - 1 - idx[idx.length - 1] < step / 2) idx.pop();
+    // Nhãn đều cuối cùng cách điểm cuối không quá nửa bước thì bỏ, kẻo hai nhãn dính vào nhau ("12/1113/11").
+    if (n - 1 - idx[idx.length - 1] <= step / 2) idx.pop();
     idx.push(n - 1);
   }
   return idx;
@@ -370,20 +375,28 @@ export function BarList({
 }
 
 /** Thanh cơ cấu (một tổng chia phần): thanh mảnh 8px, khoảng hở 2px giữa các phần, chú thích liệt kê số và tỷ lệ. */
-export function SegmentedBar({ parts, label }: { parts: { key: string; label: string; value: number; color: string }[]; label: string }) {
+export function SegmentedBar({
+  parts,
+  label,
+  format = String,
+}: {
+  parts: { key: string; label: string; value: number; color: string }[];
+  label: string;
+  format?: (v: number) => string;
+}) {
   const total = parts.reduce((s, p) => s + p.value, 0);
   const shown = parts.filter((p) => p.value > 0);
   const pct = (v: number) => (total ? `${Math.round((v / total) * 100)}%` : "0%");
   return (
     <div>
-      <div role="img" aria-label={`${label}: ${parts.map((p) => `${p.label} ${p.value} (${pct(p.value)})`).join(", ")}`} className="flex h-2 gap-0.5">
+      <div role="img" aria-label={`${label}: ${parts.map((p) => `${p.label} ${format(p.value)} (${pct(p.value)})`).join(", ")}`} className="flex h-2 gap-0.5">
         {total === 0 ? (
           <span className="h-2 flex-1 rounded-full bg-surface-active" />
         ) : (
           shown.map((p, i) => (
             <span
               key={p.key}
-              title={`${p.label}: ${p.value} (${pct(p.value)})`}
+              title={`${p.label}: ${format(p.value)} (${pct(p.value)})`}
               className={cn("h-2", i === 0 && "rounded-l-full", i === shown.length - 1 && "rounded-r-full")}
               style={{ flexGrow: p.value, flexBasis: 0, background: p.color }}
             />
@@ -396,7 +409,7 @@ export function SegmentedBar({ parts, label }: { parts: { key: string; label: st
             <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: p.color }} aria-hidden />
             <span className="min-w-0 flex-1 truncate">{p.label}</span>
             <span className="font-medium" style={{ fontVariantNumeric: "tabular-nums" }}>
-              {p.value}
+              {format(p.value)}
             </span>
             <span className="w-10 text-right text-xs text-muted2" style={{ fontVariantNumeric: "tabular-nums" }}>
               {pct(p.value)}

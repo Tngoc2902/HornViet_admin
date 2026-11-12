@@ -441,37 +441,48 @@ export function SaveBar({
   );
 }
 
-/** Phân trang: trang n (bắt đầu từ 1) ↔ skipCount = (n - 1) * pageSize. */
-export function Pager({ page, total, pageSize, onChange }: { page: number; total: number; pageSize: number; onChange: (p: number) => void }) {
+/**
+ * Phân trang gọn kiểu Shopify: một viên nhỏ "‹ 1–50 ›" dính ở góc dưới bên trái khung đang cuộn, luôn trong tầm tay
+ * khi cuộn hết danh sách dài. Trang n (bắt đầu từ 1) ↔ skipCount = (n - 1) * pageSize.
+ */
+export function Pager({
+  page,
+  total,
+  pageSize,
+  onChange,
+  anchorId,
+}: {
+  page: number;
+  total: number;
+  pageSize: number;
+  onChange: (p: number) => void;
+  /** Sang trang thì cuộn tới phần tử này (VD bảng nằm dưới biểu đồ) thay vì về đầu trang. */
+  anchorId?: string;
+}) {
+  if (total <= 0) return null;
   const pages = Math.max(1, Math.ceil(total / pageSize));
-  if (pages <= 1) return null;
-  const nums = Array.from({ length: pages }, (_, i) => i + 1).filter((n) => n === 1 || n === pages || Math.abs(n - page) <= 2);
-  const arrow = "hsv-btn-secondary w-7 px-0";
+  const from = (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, total);
+  const go = (p: number) => {
+    onChange(p);
+    // Sang trang khác thì về đầu danh sách (khung nội dung cuộn riêng).
+    const anchor = anchorId ? document.getElementById(anchorId) : null;
+    if (anchor) anchor.scrollIntoView({ block: "start" });
+    else document.getElementById("hsv-main")?.scrollTo({ top: 0 });
+  };
+  const arrow =
+    "flex h-7 w-7 items-center justify-center rounded-lg text-ink-2 transition-colors hover:bg-surface-active disabled:cursor-not-allowed disabled:text-faint disabled:hover:bg-transparent";
   return (
-    <nav aria-label="Phân trang" className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-1">
-      <p className="text-xs text-muted2">
-        {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} trong {total}
-      </p>
-      <div className="flex flex-wrap items-center gap-1">
-        <button onClick={() => onChange(page - 1)} disabled={page <= 1} aria-label="Trang trước" className={arrow}>
+    <nav aria-label="Phân trang" className="pointer-events-none sticky bottom-3 z-20 mt-3 flex">
+      <div className="pointer-events-auto flex items-center gap-0.5 rounded-xl border border-line bg-white p-0.5 shadow-[0_2px_8px_rgba(0,0,0,.1)]">
+        <button onClick={() => go(page - 1)} disabled={page <= 1} aria-label="Trang trước" className={arrow}>
           <ChevronLeft className="h-4 w-4" />
         </button>
-        {nums.map((n, i) => (
-          <span key={n} className="flex items-center gap-1">
-            {i > 0 && n - nums[i - 1] > 1 && <span className="px-1 text-faint">…</span>}
-            <button
-              onClick={() => onChange(n)}
-              aria-current={n === page ? "page" : undefined}
-              className={cn(
-                "h-7 min-w-7 rounded-lg px-2 text-xs font-medium transition-colors",
-                n === page ? "bg-surface-active font-semibold text-ink" : "text-muted2 hover:bg-surface-active/60"
-              )}
-            >
-              {n}
-            </button>
-          </span>
-        ))}
-        <button onClick={() => onChange(page + 1)} disabled={page >= pages} aria-label="Trang sau" className={arrow}>
+        <span className="min-w-[56px] px-1.5 text-center text-xs font-medium text-ink-2" style={{ fontVariantNumeric: "tabular-nums" }} title={`${from}–${to} trong ${total}`}>
+          {from}–{to}
+          <span className="sr-only"> trong {total}, trang {page} / {pages}</span>
+        </span>
+        <button onClick={() => go(page + 1)} disabled={page >= pages} aria-label="Trang sau" className={arrow}>
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>

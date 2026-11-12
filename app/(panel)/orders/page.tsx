@@ -16,7 +16,7 @@ import { useRealtime, useRealtimeRefresh } from "@/hooks/use-realtime";
 import { DELIVERY_LABEL, formatDateTime, formatVND, isPickup, ORDER_STATUS, ORDER_TABS, parseOrderTab, paymentLabel } from "@/lib/hsv/format";
 import { cn } from "@/lib/utils";
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 50;
 const COLS = "grid-cols-[110px_130px_minmax(0,1fr)_minmax(0,1.8fr)_60px_110px_130px_120px]";
 
 /** Chỉ tên sản phẩm (gộp các biến thể cùng sản phẩm), một dòng. */
