@@ -178,6 +178,17 @@ export function ProductForm({ productId, onClose, onSaved }: { productId?: numbe
 
     setSaving(true);
     try {
+      // Tồn kho của biến thể không bị sửa trên form lấy theo số mới nhất của máy chủ: đơn hàng / phiếu nhập phát sinh
+      // trong lúc form đang mở không bị ghi đè bằng số lúc mở form. Biến thể đã sửa tồn kho thì giữ đúng số người dùng nhập.
+      const freshStock = new Map<number, number>();
+      if (f.id) {
+        const fresh = await productApi.get(f.id);
+        for (const v of fresh.variants ?? []) freshStock.set(v.id, v.stockQuantity);
+      }
+      const openedStock = new Map((initial?.variants ?? []).filter((v) => v.id !== undefined).map((v) => [v.id!, v.stock]));
+      const stockOf = (v: VariantRow) =>
+        v.id !== undefined && openedStock.get(v.id) === v.stock && freshStock.has(v.id) ? freshStock.get(v.id)! : Number(v.stock);
+
       const input = {
         id: f.id,
         name: f.name.trim(),
@@ -195,7 +206,7 @@ export function ProductForm({ productId, onClose, onSaved }: { productId?: numbe
           style: v.style.trim() || null,
           // Ảnh đã gỡ khỏi bộ ảnh thì không gửi (biến thể quay về ảnh đại diện).
           imageUrl: v.image && f.images.includes(v.image) ? v.image : null,
-          stockQuantity: Number(v.stock),
+          stockQuantity: stockOf(v),
         })),
       };
       await (f.id ? productApi.update(input) : productApi.create(input));
