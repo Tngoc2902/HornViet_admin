@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Be_Vietnam_Pro, Literata } from "next/font/google";
+import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import ClientOnly from "@/components/ClientOnly";
 import { ConfirmProvider } from "@/components/hsv/confirm-provider";
@@ -8,16 +8,9 @@ import { CatalogProvider } from "@/contexts/catalog-context";
 import { RealtimeProvider } from "@/contexts/realtime-context";
 import "./globals.css";
 
-const beVietnam = Be_Vietnam_Pro({
+const inter = Inter({
   subsets: ["latin", "vietnamese"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-be-vietnam",
-});
-
-const literata = Literata({
-  subsets: ["latin", "vietnamese"],
-  weight: ["400", "500", "600"],
-  variable: "--font-literata",
+  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
@@ -28,7 +21,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="vi" className={`${beVietnam.variable} ${literata.variable}`}>
+    <html lang="vi" className={inter.variable}>
       <body suppressHydrationWarning>
         {/* Phiên đăng nhập (JWT) lưu ở localStorage nên toàn bộ ứng dụng render phía client. */}
         <ClientOnly>
@@ -44,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                       unstyled: true,
                       classNames: {
                         toast:
-                          "flex items-center whitespace-pre-line rounded-lg bg-[#111] px-[22px] py-[13px] text-sm font-medium text-white shadow-[0_10px_30px_rgba(0,0,0,.25)] font-sans",
+                          "flex items-center whitespace-pre-line rounded-xl bg-brand px-4 py-3 text-[13px] font-medium text-white shadow-[0_10px_30px_rgba(0,0,0,.3)] font-sans",
                       },
                     }}
                   />

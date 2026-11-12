@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
+import { Plus, Warehouse } from "lucide-react";
 import { useConfirm } from "@/components/hsv/confirm-provider";
-import { Chip, Drawer, ErrorBox, FieldError, FormAlert, LoadingRows, notify, Pager } from "@/components/hsv/ui";
+import { Chip, Drawer, EmptyState, ErrorBox, FieldError, FormAlert, LoadingRows, notify, PageHeader, Pager, SearchInput } from "@/components/hsv/ui";
 import { useApi, useDebounced } from "@/hooks/use-api";
 import { useRealtimeRefresh } from "@/hooks/use-realtime";
 import { toApiError } from "@/lib/api/http";
@@ -90,13 +91,13 @@ function ReceiptDrawer({
       open
       width={460}
       onClose={onClose}
-      header={<p className="font-serif text-[22px]">{receipt ? "Sửa phiếu nhập" : "Nhập hàng"}</p>}
+      header={<p className="text-sm font-semibold">{receipt ? "Sửa phiếu nhập" : "Nhập hàng"}</p>}
       footer={
         <div className="flex w-full justify-end gap-2.5">
-          <button onClick={onClose} className="px-[18px] py-[11px] text-sm">
+          <button onClick={onClose} className="hsv-btn-secondary">
             Hủy
           </button>
-          <button onClick={save} disabled={busy} className="rounded-lg bg-navy px-6 py-[11px] text-sm font-semibold text-white disabled:opacity-60">
+          <button onClick={save} disabled={busy} className="hsv-btn-primary">
             {busy ? "Đang lưu…" : receipt ? "Lưu thay đổi" : "Nhập hàng"}
           </button>
         </div>
@@ -111,7 +112,7 @@ function ReceiptDrawer({
               value={pickedId}
               onChange={(e) => setPickedId(e.target.value)}
               disabled={!options.data}
-              className={cn("hsv-input h-11 text-sm", errors.variant && "hsv-input-error")}
+              className={cn("hsv-input", errors.variant && "hsv-input-error")}
             >
               <option value="">{options.data ? "— Chọn sản phẩm —" : options.error ? "Không tải được danh sách" : "Đang tải…"}</option>
               {options.data?.items.map((v) => (
@@ -124,11 +125,11 @@ function ReceiptDrawer({
           </div>
         )}
         {(variant || receipt) && (
-          <div className="rounded-lg bg-surface px-4 py-3 text-[13.5px]">
+          <div className="rounded-lg bg-surface px-4 py-3 text-[13px]">
             <p className="font-semibold">{productName}</p>
             <p className="text-muted2">{variantName}</p>
             {variant && (
-              <p className="mt-1.5 text-[12.5px] text-subtle">
+              <p className="mt-1.5 text-xs text-muted2">
                 Tồn hiện tại: {variant.stockQuantity} · Giá vốn hiện tại: {variant.averageCost === null ? "chưa có" : formatVND(Math.round(variant.averageCost))} ·
                 Giá bán: {formatVND(variant.salePrice)}
               </p>
@@ -144,7 +145,7 @@ function ReceiptDrawer({
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
             placeholder="VD 20"
-            className={cn("hsv-input h-11 text-sm", errors.quantity && "hsv-input-error")}
+            className={cn("hsv-input", errors.quantity && "hsv-input-error")}
           />
           <FieldError message={errors.quantity} />
         </div>
@@ -156,7 +157,7 @@ function ReceiptDrawer({
             value={unitCost}
             onChange={(e) => setUnitCost(e.target.value)}
             placeholder="VD 300000"
-            className={cn("hsv-input h-11 text-sm", errors.unitCost && "hsv-input-error")}
+            className={cn("hsv-input", errors.unitCost && "hsv-input-error")}
           />
           <FieldError message={errors.unitCost} />
         </div>
@@ -168,7 +169,7 @@ function ReceiptDrawer({
             maxLength={500}
             onChange={(e) => setNote(e.target.value)}
             placeholder="VD: nhập từ làng nghề Thụy Ứng"
-            className="hsv-input h-11 text-sm"
+            className="hsv-input"
           />
         </div>
         {valid && (
@@ -196,9 +197,8 @@ function ReceiptDrawer({
   );
 }
 
-const SEARCH_CLASS = "mb-3.5 h-10 w-[300px] rounded-full border border-line bg-white px-4 text-[13.5px] outline-none focus:border-navy";
-
-function VariantCostsTab({ version, onChanged }: { version: number; onChanged: () => void }) {
+/** `tabs`: hai nút chuyển tab của trang, hiện chung thanh với ô tìm kiếm. */
+function VariantCostsTab({ version, onChanged, tabs }: { version: number; onChanged: () => void; tabs: ReactNode }) {
   const [q, setQ] = useState("");
   const keyword = useDebounced(q.trim());
   const [page, setPage] = useState(1);
@@ -211,22 +211,25 @@ function VariantCostsTab({ version, onChanged }: { version: number; onChanged: (
 
   return (
     <div>
-      <input
-        value={q}
-        onChange={(e) => {
-          setQ(e.target.value);
-          setPage(1);
-        }}
-        placeholder="Tìm theo tên sản phẩm"
-        aria-label="Tìm sản phẩm"
-        className={SEARCH_CLASS}
-      />
+      <div className="hsv-toolbar">
+        {tabs}
+        <SearchInput
+          value={q}
+          onChange={(v) => {
+            setQ(v);
+            setPage(1);
+          }}
+          placeholder="Tìm theo tên sản phẩm"
+          label="Tìm sản phẩm"
+          className="ml-auto sm:max-w-[300px]"
+        />
+      </div>
       {list.error && !list.data ? (
         <ErrorBox error={list.error} onRetry={list.reload} />
       ) : (
-        <div className={cn("hsv-card overflow-x-auto", list.loading && list.data && "opacity-70")}>
+        <div className={cn("overflow-x-auto", list.loading && list.data && "opacity-70")}>
           <div className="min-w-[900px]">
-            <div className={cn("grid gap-3 bg-surface px-5 py-3 text-xs font-bold text-muted2", COST_COLS)}>
+            <div className={cn("hsv-thead grid gap-3", COST_COLS)}>
               <span>Sản phẩm / biến thể ({list.data?.totalCount ?? "…"})</span>
               <span className="text-right">Tồn kho</span>
               <span className="text-right">Giá bán</span>
@@ -238,13 +241,13 @@ function VariantCostsTab({ version, onChanged }: { version: number; onChanged: (
             {!list.data ? (
               <LoadingRows rows={6} />
             ) : rows.length === 0 ? (
-              <p className="px-5 py-8 text-center text-sm text-subtle">Không có biến thể phù hợp.</p>
+              <EmptyState icon={Warehouse} title="Không có biến thể phù hợp" body={keyword ? "Thử đổi từ khóa tìm kiếm." : "Thêm sản phẩm trước rồi nhập hàng để tính giá vốn."} />
             ) : (
               rows.map((v) => (
-                <div key={v.productVariantId} className={cn("grid items-center gap-3 border-t border-line-2 px-5 py-[13px] text-[13px]", COST_COLS)}>
+                <div key={v.productVariantId} className={cn("hsv-trow grid items-center gap-3", COST_COLS)}>
                   <div className="min-w-0">
-                    <p className="truncate text-[13.5px] font-semibold">{v.productName}</p>
-                    <p className="truncate text-xs text-subtle">
+                    <p className="truncate font-medium">{v.productName}</p>
+                    <p className="truncate text-xs text-muted2">
                       {v.variantName}
                       {v.lastReceiptTime && ` · nhập gần nhất ${formatDateTime(v.lastReceiptTime)}`}
                     </p>
@@ -255,15 +258,13 @@ function VariantCostsTab({ version, onChanged }: { version: number; onChanged: (
                     {v.averageCost === null ? "Chưa có" : formatVND(Math.round(v.averageCost))}
                   </span>
                   <span className="text-right">{v.stockValue === null ? "—" : formatVND(Math.round(v.stockValue))}</span>
-                  <span className={cn("text-right font-semibold", v.unitProfit !== null && v.unitProfit < 0 ? "text-danger" : "text-ok")}>
+                  <span className={cn("text-right font-medium", v.unitProfit === null ? "text-faint" : v.unitProfit < 0 ? "text-danger" : "text-ok")}>
                     {v.unitProfit === null ? "—" : formatVND(Math.round(v.unitProfit))}
                   </span>
                   <span className="text-right">
-                    <button
-                      onClick={() => setReceiving(v)}
-                      className="rounded-lg border border-navy px-3 py-1.5 text-[12.5px] font-semibold text-navy hover:bg-navy hover:text-white"
-                    >
-                      + Nhập hàng
+                    <button onClick={() => setReceiving(v)} className="hsv-btn-secondary hsv-btn-sm">
+                      <Plus className="h-3.5 w-3.5" />
+                      Nhập hàng
                     </button>
                   </span>
                 </div>
@@ -278,7 +279,7 @@ function VariantCostsTab({ version, onChanged }: { version: number; onChanged: (
   );
 }
 
-function ReceiptsTab({ version, onChanged }: { version: number; onChanged: () => void }) {
+function ReceiptsTab({ version, onChanged, tabs }: { version: number; onChanged: () => void; tabs: ReactNode }) {
   const confirm = useConfirm();
   const [q, setQ] = useState("");
   const keyword = useDebounced(q.trim());
@@ -309,22 +310,25 @@ function ReceiptsTab({ version, onChanged }: { version: number; onChanged: () =>
 
   return (
     <div>
-      <input
-        value={q}
-        onChange={(e) => {
-          setQ(e.target.value);
-          setPage(1);
-        }}
-        placeholder="Tìm theo tên sản phẩm"
-        aria-label="Tìm phiếu nhập"
-        className={SEARCH_CLASS}
-      />
+      <div className="hsv-toolbar">
+        {tabs}
+        <SearchInput
+          value={q}
+          onChange={(v) => {
+            setQ(v);
+            setPage(1);
+          }}
+          placeholder="Tìm theo tên sản phẩm"
+          label="Tìm phiếu nhập"
+          className="ml-auto sm:max-w-[300px]"
+        />
+      </div>
       {list.error && !list.data ? (
         <ErrorBox error={list.error} onRetry={list.reload} />
       ) : (
-        <div className={cn("hsv-card overflow-x-auto", list.loading && list.data && "opacity-70")}>
+        <div className={cn("overflow-x-auto", list.loading && list.data && "opacity-70")}>
           <div className="min-w-[960px]">
-            <div className={cn("grid gap-3 bg-surface px-5 py-3 text-xs font-bold text-muted2", RECEIPT_COLS)}>
+            <div className={cn("hsv-thead grid gap-3", RECEIPT_COLS)}>
               <span>Ngày nhập</span>
               <span>Sản phẩm / biến thể ({list.data?.totalCount ?? "…"})</span>
               <span className="text-right">Số lượng</span>
@@ -336,31 +340,35 @@ function ReceiptsTab({ version, onChanged }: { version: number; onChanged: () =>
             {!list.data ? (
               <LoadingRows rows={6} />
             ) : rows.length === 0 ? (
-              <p className="px-5 py-8 text-center text-sm text-subtle">Chưa có phiếu nhập nào.</p>
+              <EmptyState
+                icon={Warehouse}
+                title={keyword ? "Không có phiếu nhập phù hợp" : "Chưa có phiếu nhập nào"}
+                body={keyword ? "Thử đổi từ khóa tìm kiếm." : "Bấm “Nhập hàng” để ghi nhận lô hàng đầu tiên và tính giá vốn."}
+              />
             ) : (
               rows.map((r) => (
-                <div key={r.id} className={cn("grid items-center gap-3 border-t border-line-2 px-5 py-[13px] text-[13px]", RECEIPT_COLS)}>
-                  <span className="text-[12.5px] text-subtle">
+                <div key={r.id} className={cn("hsv-trow grid items-center gap-3", RECEIPT_COLS)}>
+                  <span className="text-muted2">
                     {formatDateTime(r.creationTime)}
                     {r.lastModificationTime && <span className="block text-[11px] text-faint">đã sửa</span>}
                   </span>
                   <div className="min-w-0">
-                    <p className="truncate text-[13.5px] font-semibold">{r.productName}</p>
-                    <p className="truncate text-xs text-subtle">
+                    <p className="truncate font-medium">{r.productName}</p>
+                    <p className="truncate text-xs text-muted2">
                       {r.variantName}
                       {r.creatorUserName && ` · ${r.creatorUserName}`}
                     </p>
                   </div>
                   <span className="text-right">{r.quantity}</span>
                   <span className="text-right">{formatVND(r.unitCost)}</span>
-                  <span className="text-right font-semibold">{formatVND(r.totalCost)}</span>
-                  <span className="truncate text-xs text-subtle">{r.note || "—"}</span>
+                  <span className="text-right font-medium">{formatVND(r.totalCost)}</span>
+                  <span className="truncate text-xs text-muted2">{r.note || "—"}</span>
                   <div className="flex justify-end gap-3 whitespace-nowrap">
                     <button
                       onClick={() => setEditing(r)}
                       disabled={!r.canEdit}
                       title={r.canEdit ? undefined : "Chỉ sửa được phiếu nhập mới nhất của biến thể"}
-                      className={cn("text-[13px] font-semibold text-navy", !r.canEdit && "cursor-not-allowed opacity-40")}
+                      className="hsv-link"
                     >
                       Sửa
                     </button>
@@ -368,7 +376,7 @@ function ReceiptsTab({ version, onChanged }: { version: number; onChanged: () =>
                       onClick={() => onDelete(r)}
                       disabled={!r.canEdit}
                       title={r.canEdit ? undefined : "Chỉ hủy được phiếu nhập mới nhất của biến thể"}
-                      className={cn("text-[13px] font-semibold text-danger", !r.canEdit && "cursor-not-allowed opacity-40")}
+                      className="hsv-link-danger"
                     >
                       Hủy
                     </button>
@@ -393,20 +401,30 @@ export default function AdminInventory() {
   const bump = () => setVersion((v) => v + 1);
   useRealtimeRefresh(["StockChanged", "ProductChanged"], bump);
 
+  const tabs = (
+    <div className="flex flex-wrap gap-1">
+      <Chip active={tab === "costs"} onClick={() => setTab("costs")}>
+        Giá vốn & tồn kho
+      </Chip>
+      <Chip active={tab === "receipts"} onClick={() => setTab("receipts")}>
+        Lịch sử nhập
+      </Chip>
+    </div>
+  );
+
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Chip active={tab === "costs"} onClick={() => setTab("costs")}>
-          Giá vốn & tồn kho
-        </Chip>
-        <Chip active={tab === "receipts"} onClick={() => setTab("receipts")}>
-          Lịch sử nhập
-        </Chip>
-        <button onClick={() => setReceiving(true)} className="ml-auto rounded-lg bg-navy px-[18px] py-2.5 text-[13.5px] font-semibold text-white">
-          + Nhập hàng
-        </button>
-      </div>
-      {tab === "costs" ? <VariantCostsTab version={version} onChanged={bump} /> : <ReceiptsTab version={version} onChanged={bump} />}
+      <PageHeader
+        title="Nhập kho & giá vốn"
+        subtitle="Giá vốn bình quân, giá trị tồn và lãi trên từng biến thể; mỗi lần nhập hàng tạo một phiếu nhập."
+        actions={
+          <button onClick={() => setReceiving(true)} className="hsv-btn-primary">
+            <Plus className="h-3.5 w-3.5" />
+            Nhập hàng
+          </button>
+        }
+      />
+      {tab === "costs" ? <VariantCostsTab version={version} onChanged={bump} tabs={tabs} /> : <ReceiptsTab version={version} onChanged={bump} tabs={tabs} />}
       {receiving && <ReceiptDrawer onClose={() => setReceiving(false)} onSaved={bump} />}
     </div>
   );

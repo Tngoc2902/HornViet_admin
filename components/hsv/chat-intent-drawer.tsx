@@ -137,22 +137,22 @@ export function ChatIntentForm({ id, onClose, onSaved }: { id: number | "new"; o
       width={640}
       header={
         <>
-          <p className="text-[17px] font-bold">{isNew ? "Thêm ý định" : "Sửa ý định"}</p>
-          {!isNew && detail.data && <p className="mt-0.5 truncate font-mono text-[12.5px] text-muted2">{detail.data.code}</p>}
+          <p className="text-sm font-semibold">{isNew ? "Thêm ý định" : "Sửa ý định"}</p>
+          {!isNew && detail.data && <p className="mt-0.5 truncate font-mono text-xs text-muted2">{detail.data.code}</p>}
         </>
       }
       footer={
         form && (
           <>
             {!isNew && (
-              <button onClick={remove} disabled={busy} className="px-1 py-2.5 text-[13.5px] font-semibold text-danger">
+              <button onClick={remove} disabled={busy} className="hsv-btn-danger-outline">
                 Xóa ý định
               </button>
             )}
-            <button onClick={onClose} className="ml-auto px-3.5 py-2.5 text-[13.5px]">
+            <button onClick={onClose} className="hsv-btn-secondary ml-auto">
               Hủy
             </button>
-            <button onClick={save} disabled={busy} className="rounded-lg bg-navy px-5 py-2.5 text-[13.5px] font-semibold text-white disabled:opacity-60">
+            <button onClick={save} disabled={busy} className="hsv-btn-primary">
               {busy ? "Đang lưu…" : "Lưu ý định"}
             </button>
           </>
@@ -180,7 +180,7 @@ export function ChatIntentForm({ id, onClose, onSaved }: { id: number | "new"; o
                 value={form.name}
                 onChange={(e) => set("name", e.target.value)}
                 placeholder="VD: Hỏi giá"
-                className={cn("hsv-input h-11 text-sm", errors.name && "hsv-input-error")}
+                className={cn("hsv-input", errors.name && "hsv-input-error")}
               />
               <FieldError message={errors.name} />
             </div>
@@ -193,7 +193,7 @@ export function ChatIntentForm({ id, onClose, onSaved }: { id: number | "new"; o
                 value={form.code}
                 onChange={(e) => set("code", e.target.value)}
                 placeholder="Để trống: tự tạo từ tên"
-                className={cn("hsv-input h-11 font-mono text-sm", errors.code && "hsv-input-error")}
+                className={cn("hsv-input font-mono", errors.code && "hsv-input-error")}
               />
               <FieldError message={errors.code} />
             </div>
@@ -206,7 +206,7 @@ export function ChatIntentForm({ id, onClose, onSaved }: { id: number | "new"; o
             id="ci-action"
             value={form.action}
             onChange={(e) => set("action", Number(e.target.value) as ChatIntentAction)}
-            className="hsv-input h-11 text-sm"
+            className="hsv-input"
           >
             {Object.entries(ACTION_LABEL).map(([k, label]) => (
               <option key={k} value={k}>
@@ -214,7 +214,7 @@ export function ChatIntentForm({ id, onClose, onSaved }: { id: number | "new"; o
               </option>
             ))}
           </select>
-          <p className="mt-1 text-[12px] text-muted2">{ACTION_HINT[form.action]}</p>
+          <p className="mt-1 text-xs text-muted2">{ACTION_HINT[form.action]}</p>
 
           <label htmlFor="ci-answer" className="hsv-label mt-3.5">
             Câu trả lời mẫu
@@ -224,7 +224,7 @@ export function ChatIntentForm({ id, onClose, onSaved }: { id: number | "new"; o
             rows={4}
             value={form.answer}
             onChange={(e) => set("answer", e.target.value)}
-            className={cn("hsv-input h-auto py-2.5 text-sm", errors.answer && "hsv-input-error")}
+            className={cn("hsv-input", errors.answer && "hsv-input-error")}
           />
           <FieldError message={errors.answer} />
 
@@ -238,7 +238,7 @@ export function ChatIntentForm({ id, onClose, onSaved }: { id: number | "new"; o
                 value={form.linkLabel}
                 onChange={(e) => set("linkLabel", e.target.value)}
                 placeholder="VD: Chính sách đổi trả"
-                className="hsv-input h-11 text-sm"
+                className="hsv-input"
               />
             </div>
             <div>
@@ -250,17 +250,17 @@ export function ChatIntentForm({ id, onClose, onSaved }: { id: number | "new"; o
                 value={form.linkUrl}
                 onChange={(e) => set("linkUrl", e.target.value)}
                 placeholder="/ho-tro#doi-tra"
-                className={cn("hsv-input h-11 text-sm", errors.linkUrl && "hsv-input-error")}
+                className={cn("hsv-input", errors.linkUrl && "hsv-input-error")}
               />
               <FieldError message={errors.linkUrl} />
             </div>
           </div>
 
-          <label className="mt-4 flex cursor-pointer items-start gap-2.5 text-[13.5px]">
+          <label className="mt-4 flex cursor-pointer items-start gap-2.5 text-[13px]">
             <input type="checkbox" checked={form.isActive} onChange={(e) => set("isActive", e.target.checked)} className="mt-0.5 h-4 w-4" />
             <span>
               Đang dùng
-              <span className="block text-[12px] text-muted2">Tắt thì lần huấn luyện kế tiếp bỏ qua ý định này.</span>
+              <span className="block text-xs text-muted2">Tắt thì lần huấn luyện kế tiếp bỏ qua ý định này.</span>
             </span>
           </label>
 
@@ -268,7 +268,7 @@ export function ChatIntentForm({ id, onClose, onSaved }: { id: number | "new"; o
             <label htmlFor="ci-phrases" className="hsv-label mb-1.5">
               Câu mẫu — mỗi dòng một câu
             </label>
-            <span className={cn("mb-1.5 text-[12px]", lines.length < 5 ? "text-danger" : "text-muted2")}>{lines.length} câu</span>
+            <span className={cn("mb-1.5 text-xs", lines.length < 5 ? "text-danger" : "text-muted2")}>{lines.length} câu</span>
           </div>
           <textarea
             id="ci-phrases"
@@ -276,10 +276,10 @@ export function ChatIntentForm({ id, onClose, onSaved }: { id: number | "new"; o
             value={form.phrases}
             onChange={(e) => set("phrases", e.target.value)}
             placeholder={"lược sừng giá bao nhiêu\nvong tay bn tien\ncho mình xin giá…"}
-            className={cn("hsv-input h-auto py-2.5 font-mono text-[13px] leading-relaxed", errors.phrases && "hsv-input-error")}
+            className={cn("hsv-input font-mono", errors.phrases && "hsv-input-error")}
           />
           <FieldError message={errors.phrases} />
-          <p className="mt-1 text-[12px] text-muted2">
+          <p className="mt-1 text-xs text-muted2">
             Viết như khách thật hay gõ: có dấu, không dấu, viết tắt (“bn”, “sp”, “ko”), cách hỏi khác nhau. Câu trùng nhau sau khi bỏ dấu chỉ giữ một.
           </p>
         </div>

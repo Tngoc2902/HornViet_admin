@@ -37,11 +37,11 @@ export function toDateParam(d: Date) {
 }
 
 export const ORDER_STATUS: Record<OrderStatus, { label: string; fg: string; bg: string; bd: string }> = {
-  [OrderStatus.Pending]: { label: "Chờ xử lý", fg: "#8a5a12", bg: "#fbf1dc", bd: "#ecd29a" },
-  [OrderStatus.Shipping]: { label: "Đang giao", fg: "#1f4f7a", bg: "#e6eef6", bd: "#b9cde2" },
-  [OrderStatus.Completed]: { label: "Hoàn thành", fg: "#2f5d3c", bg: "#e7f0e8", bd: "#bcd3c0" },
-  [OrderStatus.Canceled]: { label: "Đã hủy", fg: "#6f665b", bg: "#efebe4", bd: "#dcd4c7" },
-  [OrderStatus.ReadyForPickup]: { label: "Chờ khách nhận", fg: "#1f4f7a", bg: "#e6eef6", bd: "#b9cde2" },
+  [OrderStatus.Pending]: { label: "Chờ xử lý", fg: "#5e4200", bg: "#ffe6b5", bd: "#f5c56b" },
+  [OrderStatus.Shipping]: { label: "Đang giao", fg: "#00527c", bg: "#e0f0ff", bd: "#a8d4f5" },
+  [OrderStatus.Completed]: { label: "Hoàn thành", fg: "#0f4d00", bg: "#b9f886", bd: "#8fdc5a" },
+  [OrderStatus.Canceled]: { label: "Đã hủy", fg: "#4a4a4a", bg: "#ebebeb", bd: "#d4d4d4" },
+  [OrderStatus.ReadyForPickup]: { label: "Chờ khách nhận", fg: "#00527c", bg: "#e0f0ff", bd: "#a8d4f5" },
 };
 
 export const ORDER_FLOW: OrderStatus[] = [OrderStatus.Pending, OrderStatus.Shipping, OrderStatus.Completed];

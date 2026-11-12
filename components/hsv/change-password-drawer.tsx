@@ -58,13 +58,13 @@ export function ChangePasswordDrawer({ onClose }: { onClose: () => void }) {
       open
       width={460}
       onClose={onClose}
-      header={<p className="font-serif text-[22px]">Đổi mật khẩu</p>}
+      header={<p className="text-sm font-semibold">Đổi mật khẩu</p>}
       footer={
         <div className="flex w-full justify-end gap-2.5">
-          <button onClick={onClose} className="px-[18px] py-[11px] text-sm">
+          <button onClick={onClose} className="hsv-btn-secondary">
             Hủy
           </button>
-          <button onClick={save} disabled={busy} className="rounded-lg bg-navy px-6 py-[11px] text-sm font-semibold text-white disabled:opacity-60">
+          <button onClick={save} disabled={busy} className="hsv-btn-primary">
             {busy ? "Đang lưu…" : "Đổi mật khẩu"}
           </button>
         </div>
@@ -84,12 +84,12 @@ export function ChangePasswordDrawer({ onClose }: { onClose: () => void }) {
               value={form[f.key]}
               placeholder={f.placeholder}
               onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
-              className={cn("hsv-input h-11 text-sm", errors[f.key] && "hsv-input-error")}
+              className={cn("hsv-input", errors[f.key] && "hsv-input-error")}
             />
             <FieldError message={errors[f.key]} />
           </div>
         ))}
-        <p className="rounded-lg bg-surface px-4 py-3 text-[12.5px] text-muted2">
+        <p className="rounded-lg bg-surface px-4 py-3 text-xs text-muted2">
           Sau khi đổi, mọi phiên đăng nhập của tài khoản này (kể cả trên máy khác) sẽ bị đăng xuất.
         </p>
       </div>

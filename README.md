@@ -63,7 +63,7 @@ nên **không** đặt bí mật vào đây.
 | `/` | Tổng quan | Nhân viên, Quản trị viên |
 | `/categories` | Danh mục | Nhân viên, Quản trị viên |
 | `/materials` | Nguyên liệu & nguồn gốc | Nhân viên, Quản trị viên |
-| `/products` | Sản phẩm: biến thể, tải ảnh lên, ẩn / hiện | Nhân viên, Quản trị viên |
+| `/products` | Sản phẩm: biến thể, tải ảnh lên, ẩn / hiện; chọn nhiều dòng để ẩn / hiện / xóa hàng loạt | Nhân viên, Quản trị viên |
 | `/collections` | Bộ sưu tập: nhóm sản phẩm hiện ở mục "Bộ sưu tập" của cửa hàng | Nhân viên, Quản trị viên |
 | `/orders` | Đơn hàng: đổi trạng thái; tạo / hủy vận đơn GHN, in nhãn, theo dõi tiến trình (môi trường thử GHN có nút giả lập trạng thái) | Nhân viên, Quản trị viên |
 | `/support` | Hỗ trợ khách hàng: tiếp nhận và trả lời hội thoại khi khách bấm "Chat với nhân viên" ở cửa hàng | Nhân viên, Quản trị viên |
@@ -74,7 +74,7 @@ nên **không** đặt bí mật vào đây.
 
 Trang chỉ dành cho Quản trị viên khai báo ở `lib/hsv/admin-routes.ts`: Nhân viên không thấy trên menu và bị chuyển về Tổng quan.
 
-Nút **Đổi mật khẩu** ở cuối thanh bên (mọi tài khoản quản trị): đổi xong mọi phiên của tài khoản bị đăng xuất, kể cả phiên hiện tại.
+Mục **Đổi mật khẩu** trong menu tài khoản ở cuối thanh bên (mọi tài khoản quản trị): đổi xong mọi phiên của tài khoản bị đăng xuất, kể cả phiên hiện tại.
 Trang quản trị không có chức năng tự quên mật khẩu (chỉ trang cửa hàng có, bằng mã xác nhận qua email): Nhân viên quên mật khẩu thì
 Quản trị viên đặt lại ở trang Người dùng; tài khoản Quản trị viên và Nhân viên cũng không nhận được mã đặt lại từ backend.
 Tổng quan, Thống kê và Nhập kho lấy giá vốn / lợi nhuận trực tiếp từ backend (API `Statistic`, `StockReceipt`); thiếu dữ liệu thì hiện "—".

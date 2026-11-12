@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useConfirm } from "@/components/hsv/confirm-provider";
-import { Chip, Drawer, ErrorBox, FieldError, FormAlert, LoadingRows, notify, Pager } from "@/components/hsv/ui";
+import { Plus, Users } from "lucide-react";
+import { Badge, Chip, Drawer, EmptyState, ErrorBox, FieldError, FormAlert, LoadingRows, notify, PageHeader, Pager, SearchInput } from "@/components/hsv/ui";
 import { useAuth } from "@/contexts/auth-context";
 import { useApi, useDebounced } from "@/hooks/use-api";
 import { toApiError } from "@/lib/api/http";
@@ -13,7 +14,7 @@ import { isStrongPassword, isValidEmail, isValidPhone, normalizePhone, type Fiel
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 12;
-const COLS = "grid-cols-[minmax(0,1.6fr)_120px_100px_minmax(0,2.1fr)_100px_180px]";
+const COLS = "grid-cols-[minmax(0,1.8fr)_130px_100px_150px_100px_190px]";
 const ROLES: RoleName[] = ["Customer", "Staff", "Admin"];
 
 type CreateKey = "name" | "emailAddress" | "userName" | "phoneNumber" | "password";
@@ -71,13 +72,13 @@ function CreateUserDrawer({ onClose, onCreated }: { onClose: () => void; onCreat
       open
       width={460}
       onClose={onClose}
-      header={<p className="font-serif text-[22px]">Thêm tài khoản</p>}
+      header={<p className="text-sm font-semibold">Thêm tài khoản</p>}
       footer={
         <div className="flex w-full justify-end gap-2.5">
-          <button onClick={onClose} className="px-[18px] py-[11px] text-sm">
+          <button onClick={onClose} className="hsv-btn-secondary">
             Hủy
           </button>
-          <button onClick={save} disabled={busy} className="rounded-lg bg-navy px-6 py-[11px] text-sm font-semibold text-white disabled:opacity-60">
+          <button onClick={save} disabled={busy} className="hsv-btn-primary">
             {busy ? "Đang tạo…" : "Tạo tài khoản"}
           </button>
         </div>
@@ -95,20 +96,22 @@ function CreateUserDrawer({ onClose, onCreated }: { onClose: () => void; onCreat
               value={form[f.key]}
               placeholder={f.placeholder}
               onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
-              className={cn("hsv-input h-11 text-sm", errors[f.key] && "hsv-input-error")}
+              className={cn("hsv-input", errors[f.key] && "hsv-input-error")}
             />
             <FieldError message={errors[f.key]} />
           </div>
         ))}
         <div>
-          <p className="hsv-label mb-2">Vai trò</p>
-          <div className="flex gap-1.5">
+          <label htmlFor="cu-role" className="hsv-label">
+            Vai trò
+          </label>
+          <select id="cu-role" value={role} onChange={(e) => setRole(e.target.value as RoleName)} className="hsv-input">
             {ROLES.map((r) => (
-              <Chip key={r} active={role === r} onClick={() => setRole(r)}>
+              <option key={r} value={r}>
                 {ROLE_LABEL[r]}
-              </Chip>
+              </option>
             ))}
-          </div>
+          </select>
         </div>
       </div>
     </Drawer>
@@ -155,20 +158,20 @@ function ResetPasswordDrawer({ user, onClose }: { user: User; onClose: () => voi
       open
       width={460}
       onClose={onClose}
-      header={<p className="font-serif text-[22px]">Đặt lại mật khẩu</p>}
+      header={<p className="text-sm font-semibold">Đặt lại mật khẩu</p>}
       footer={
         <div className="flex w-full justify-end gap-2.5">
-          <button onClick={onClose} className="px-[18px] py-[11px] text-sm">
+          <button onClick={onClose} className="hsv-btn-secondary">
             Hủy
           </button>
-          <button onClick={save} disabled={busy} className="rounded-lg bg-navy px-6 py-[11px] text-sm font-semibold text-white disabled:opacity-60">
+          <button onClick={save} disabled={busy} className="hsv-btn-primary">
             {busy ? "Đang lưu…" : "Đặt lại mật khẩu"}
           </button>
         </div>
       }
     >
       <div className="flex flex-col gap-4">
-        <p className="text-[13.5px] text-muted2">
+        <p className="text-[13px] text-muted2">
           Tài khoản: <span className="font-semibold text-ink-2">{user.name}</span> ({user.emailAddress || user.userName})
         </p>
         <FormAlert message={formError} />
@@ -182,12 +185,12 @@ function ResetPasswordDrawer({ user, onClose }: { user: User; onClose: () => voi
               value={form[f.key]}
               placeholder={f.key === "newPassword" ? "Tối thiểu 6 ký tự, gồm chữ và số" : undefined}
               onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
-              className={cn("hsv-input h-11 text-sm", errors[f.key] && "hsv-input-error")}
+              className={cn("hsv-input", errors[f.key] && "hsv-input-error")}
             />
             <FieldError message={errors[f.key]} />
           </div>
         ))}
-        <p className="rounded-lg bg-surface px-4 py-3 text-[12.5px] text-muted2">
+        <p className="rounded-lg bg-surface px-4 py-3 text-xs text-muted2">
           Báo mật khẩu mới cho người dùng qua kênh riêng. Mọi phiên đăng nhập hiện có của tài khoản này sẽ bị đăng xuất ngay.
         </p>
       </div>
@@ -248,111 +251,117 @@ export default function AdminUsers() {
 
   return (
     <div>
-      <div className="mb-3.5 flex flex-wrap items-center gap-3">
-        <input
-          value={q}
-          onChange={(e) => {
-            setQ(e.target.value);
-            setPage(1);
-          }}
-          placeholder="Tên, email, tên đăng nhập, số điện thoại"
-          aria-label="Tìm người dùng"
-          className="h-10 w-[300px] rounded-full border border-line bg-white px-4 text-[13.5px] outline-none focus:border-navy"
-        />
-        <div className="flex flex-wrap gap-1.5">
-          <Chip active={!roleFilter} onClick={() => (setRoleFilter(undefined), setPage(1))} className="px-3 py-[7px] text-[12.5px]">
-            Mọi vai trò
-          </Chip>
-          {ROLES.map((r) => (
-            <Chip key={r} active={roleFilter === r} onClick={() => (setRoleFilter(r), setPage(1))} className="px-3 py-[7px] text-[12.5px]">
-              {ROLE_LABEL[r]}
-            </Chip>
-          ))}
-        </div>
-        <button onClick={() => setCreating(true)} className="ml-auto rounded-lg bg-navy px-[18px] py-2.5 text-[13.5px] font-semibold text-white">
-          + Thêm tài khoản
-        </button>
-      </div>
+      <PageHeader
+        title="Người dùng"
+        subtitle="Tài khoản khách hàng, nhân viên và quản trị viên của cửa hàng."
+        actions={
+          <button onClick={() => setCreating(true)} className="hsv-btn-primary">
+            <Plus className="h-4 w-4" />
+            Thêm tài khoản
+          </button>
+        }
+      />
 
       {list.error && !list.data ? (
         <ErrorBox error={list.error} onRetry={list.reload} />
       ) : (
-        <div className={cn("hsv-card overflow-x-auto", list.loading && list.data && "opacity-70")}>
-          <div className="min-w-[990px]">
-            <div className={cn("grid gap-3 bg-surface px-5 py-3 text-xs font-bold text-muted2", COLS)}>
-              <span>Người dùng ({list.data?.totalCount ?? "…"})</span>
-              <span>Điện thoại</span>
-              <span>Ngày tạo</span>
-              <span>Vai trò</span>
-              <span>Trạng thái</span>
-              <span className="text-right">Thao tác</span>
+        <div className="hsv-index">
+          <div className="hsv-toolbar">
+            <div className="flex flex-wrap gap-1">
+              <Chip active={!roleFilter} onClick={() => (setRoleFilter(undefined), setPage(1))}>
+                Mọi vai trò
+              </Chip>
+              {ROLES.map((r) => (
+                <Chip key={r} active={roleFilter === r} onClick={() => (setRoleFilter(r), setPage(1))}>
+                  {ROLE_LABEL[r]}
+                </Chip>
+              ))}
             </div>
-            {!list.data ? (
-              <LoadingRows rows={6} />
-            ) : rows.length === 0 ? (
-              <p className="px-5 py-8 text-center text-sm text-subtle">Không có người dùng phù hợp.</p>
-            ) : (
-              rows.map((u) => {
-                const isMe = u.id === session?.userId;
-                return (
-                  <div key={u.id} className={cn("grid items-center gap-3 border-t border-line-2 px-5 py-[13px]", COLS, busyId === u.id && "opacity-50")}>
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-surface-active text-[13px] font-bold">
-                        {initialOf(u.name)}
+            <SearchInput
+              value={q}
+              onChange={(v) => {
+                setQ(v);
+                setPage(1);
+              }}
+              placeholder="Tên, email, tên đăng nhập, số điện thoại"
+              label="Tìm người dùng"
+              className="ml-auto sm:max-w-[340px]"
+            />
+          </div>
+          <div className={cn("overflow-x-auto", list.loading && list.data && "opacity-70")}>
+            <div className="min-w-[940px]">
+              <div className={cn("hsv-thead grid gap-3", COLS)}>
+                <span>Người dùng ({list.data?.totalCount ?? "…"})</span>
+                <span>Điện thoại</span>
+                <span>Ngày tạo</span>
+                <span>Vai trò</span>
+                <span>Trạng thái</span>
+                <span className="text-right">Thao tác</span>
+              </div>
+              {!list.data ? (
+                <LoadingRows rows={6} />
+              ) : rows.length === 0 ? (
+                <EmptyState icon={Users} title="Không có người dùng phù hợp" body="Thử đổi từ khóa hoặc vai trò đang lọc." />
+              ) : (
+                rows.map((u) => {
+                  const isMe = u.id === session?.userId;
+                  const role: RoleName = u.roleNames.includes("Admin") ? "Admin" : u.roleNames.includes("Staff") ? "Staff" : "Customer";
+                  return (
+                    <div key={u.id} className={cn("hsv-trow grid items-center gap-3", COLS, busyId === u.id && "opacity-50")}>
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-active text-xs font-semibold text-ink-2">
+                          {initialOf(u.name)}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate font-medium">
+                            {u.name}
+                            {isMe && <span className="ml-1.5 text-xs font-normal text-muted2">(bạn)</span>}
+                          </p>
+                          <p className="truncate text-xs text-muted2">{u.emailAddress || u.userName}</p>
+                        </div>
+                      </div>
+                      <span>{u.phoneNumber || "—"}</span>
+                      <span className="text-muted2">{formatDate(u.creationTime)}</span>
+                      <select
+                        value={role}
+                        onChange={(e) => onRole(u, e.target.value as RoleName)}
+                        disabled={isMe || busyId === u.id}
+                        title={isMe ? "Không thể thay đổi quyền của chính mình" : undefined}
+                        aria-label={`Vai trò của ${u.name}`}
+                        className="hsv-input"
+                      >
+                        {ROLES.map((r) => (
+                          <option key={r} value={r}>
+                            {ROLE_LABEL[r]}
+                          </option>
+                        ))}
+                      </select>
+                      <span>
+                        <Badge tone={u.isActive ? "ok" : "danger"}>{u.isActive ? "Hoạt động" : "Đã khóa"}</Badge>
                       </span>
-                      <div className="min-w-0">
-                        <p className="text-[13.5px] font-semibold">
-                          {u.name}
-                          {isMe && <span className="ml-1.5 text-[11px] font-semibold text-gold">(bạn)</span>}
-                        </p>
-                        <p className="truncate text-xs text-subtle">{u.emailAddress || u.userName}</p>
+                      <div className="flex justify-end gap-3 whitespace-nowrap">
+                        <button
+                          onClick={() => setResetting(u)}
+                          disabled={isMe || busyId === u.id}
+                          title={isMe ? "Không thể đặt lại mật khẩu của chính mình" : undefined}
+                          className="hsv-link"
+                        >
+                          Đặt lại mật khẩu
+                        </button>
+                        <button
+                          onClick={() => onLock(u)}
+                          disabled={isMe || busyId === u.id}
+                          title={isMe ? "Không thể khóa tài khoản của chính mình" : undefined}
+                          className={u.isActive ? "hsv-link-danger" : "hsv-link"}
+                        >
+                          {u.isActive ? "Khóa" : "Mở khóa"}
+                        </button>
                       </div>
                     </div>
-                    <span className="text-[13px]">{u.phoneNumber || "—"}</span>
-                    <span className="text-[12.5px] text-subtle">{formatDate(u.creationTime)}</span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {ROLES.map((r) => (
-                        <Chip
-                          key={r}
-                          active={u.roleNames.includes(r)}
-                          disabled={busyId === u.id}
-                          onClick={() => onRole(u, r)}
-                          className={cn("px-2.5 py-[5px] text-xs", isMe && !u.roleNames.includes(r) && "opacity-50")}
-                        >
-                          {ROLE_LABEL[r]}
-                        </Chip>
-                      ))}
-                    </div>
-                    <span
-                      className={cn(
-                        "justify-self-start rounded-lg px-2.5 py-[3px] text-xs font-semibold",
-                        u.isActive ? "bg-ok-soft text-ok" : "bg-danger-soft text-danger"
-                      )}
-                    >
-                      {u.isActive ? "Hoạt động" : "Đã khóa"}
-                    </span>
-                    <div className="flex justify-end gap-3 whitespace-nowrap">
-                      <button
-                        onClick={() => setResetting(u)}
-                        disabled={isMe || busyId === u.id}
-                        title={isMe ? "Không thể đặt lại mật khẩu của chính mình" : undefined}
-                        className={cn("text-[13px] font-semibold text-navy", isMe && "cursor-not-allowed opacity-40")}
-                      >
-                        Đặt lại mật khẩu
-                      </button>
-                      <button
-                        onClick={() => onLock(u)}
-                        disabled={isMe || busyId === u.id}
-                        title={isMe ? "Không thể khóa tài khoản của chính mình" : undefined}
-                        className={cn("text-[13px] font-semibold", u.isActive ? "text-danger" : "text-ok", isMe && "cursor-not-allowed opacity-40")}
-                      >
-                        {u.isActive ? "Khóa" : "Mở khóa"}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
       )}
