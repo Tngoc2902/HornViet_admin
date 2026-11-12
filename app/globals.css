@@ -71,6 +71,27 @@
     background-size: 14px;
   }
 
+  /* Ô đánh dấu: vuông bo nhẹ, đã chọn thì nền đen dấu trắng. */
+  .hsv-check {
+    @apply h-4 w-4 shrink-0 cursor-pointer appearance-none rounded-[5px] border border-faint bg-white outline-none transition-colors hover:border-ink focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 12px;
+  }
+
+  .hsv-check:checked,
+  .hsv-check:indeterminate {
+    @apply border-brand bg-brand;
+  }
+
+  .hsv-check:checked {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5 10 17 19 7.5'/%3E%3C/svg%3E");
+  }
+
+  .hsv-check:indeterminate {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round'%3E%3Cpath d='M6 12h12'/%3E%3C/svg%3E");
+  }
+
   .hsv-input-error {
     @apply border-danger bg-danger-soft/40 hover:border-danger focus:border-danger focus:ring-danger;
   }

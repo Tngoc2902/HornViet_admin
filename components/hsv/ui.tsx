@@ -249,6 +249,27 @@ export function Card({
   );
 }
 
+/** Ô đánh dấu (chọn dòng trong bảng). `indeterminate` = mới chọn một phần (ô "chọn tất cả"). */
+export function Checkbox({
+  checked,
+  indeterminate = false,
+  onChange,
+  label,
+  disabled,
+}: {
+  checked: boolean;
+  indeterminate?: boolean;
+  onChange: () => void;
+  label: string;
+  disabled?: boolean;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = indeterminate && !checked;
+  }, [indeterminate, checked]);
+  return <input ref={ref} type="checkbox" checked={checked} onChange={onChange} disabled={disabled} aria-label={label} className="hsv-check" />;
+}
+
 /** Ô tìm kiếm có biểu tượng kính lúp. */
 export function SearchInput({
   value,

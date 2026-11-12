@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ImagePlus, Loader2, Plus, X } from "lucide-react";
+import { ExternalLink, ImagePlus, Loader2, Plus, X } from "lucide-react";
 import { useConfirm } from "@/components/hsv/confirm-provider";
 import { Badge, Card, DetailPage, ErrorBox, FieldError, FormAlert, LoadingRows, notify, ProductImage, SaveBar } from "@/components/hsv/ui";
 import { useCatalog } from "@/contexts/catalog-context";
 import { useApi } from "@/hooks/use-api";
-import { toApiError } from "@/lib/api/http";
+import { STORE_URL, toApiError } from "@/lib/api/http";
 import { fileApi, productApi } from "@/lib/api/services";
 import type { ProductDetail } from "@/lib/api/types";
 import { formatVND, LOW_STOCK_THRESHOLD } from "@/lib/hsv/format";
@@ -240,6 +240,15 @@ export function ProductForm({ productId, onClose, onSaved }: { productId?: numbe
       title={title}
       onBack={leave}
       backLabel="Quay lại danh sách sản phẩm"
+      actions={
+        // Sản phẩm đang ẩn không xem được trên cửa hàng (trang cửa hàng trả 404) nên chỉ hiện nút khi đang bán.
+        !isNew && initial?.isActive && STORE_URL ? (
+          <a href={`${STORE_URL}/products/${productId}`} target="_blank" rel="noreferrer" className="hsv-btn-secondary">
+            <ExternalLink className="h-3.5 w-3.5" />
+            Xem trên cửa hàng
+          </a>
+        ) : undefined
+      }
       badge={!isNew && initial ? <Badge tone={initial.isActive ? "ok" : "neutral"}>{initial.isActive ? "Đang bán" : "Tạm ẩn"}</Badge> : undefined}
       aside={
         f && (

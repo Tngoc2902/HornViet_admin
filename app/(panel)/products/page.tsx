@@ -1,11 +1,11 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
-import { Package, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Loader2, Package, Plus } from "lucide-react";
 import { useConfirm } from "@/components/hsv/confirm-provider";
 import { ProductForm } from "@/components/hsv/product-form";
-import { Badge, Chip, EmptyState, ErrorBox, LoadingRows, notify, PageHeader, Pager, ProductImage, SearchInput } from "@/components/hsv/ui";
+import { Badge, Checkbox, Chip, EmptyState, ErrorBox, LoadingRows, notify, PageHeader, Pager, ProductImage, SearchInput } from "@/components/hsv/ui";
 import { useCatalog } from "@/contexts/catalog-context";
 import { useApi, useDebounced } from "@/hooks/use-api";
 import { useRealtimeRefresh } from "@/hooks/use-realtime";
@@ -16,7 +16,9 @@ import { formatVND } from "@/lib/hsv/format";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 10;
-const COLS = "grid-cols-[minmax(240px,2.4fr)_100px_minmax(150px,1.1fr)_1fr_1fr_110px_140px]";
+const COLS = "grid-cols-[16px_minmax(240px,2.4fr)_100px_minmax(150px,1.1fr)_1fr_1fr_110px_140px]";
+const DELETE_NOTE =
+  "Sản phẩm được xóa mềm: biến mất khỏi cửa hàng và trang quản trị, được gỡ khỏi giỏ hàng của khách; lịch sử đơn và thống kê giữ nguyên.";
 
 const STATUS = [
   { key: "all", label: "Tất cả", value: undefined },
@@ -36,6 +38,9 @@ export default function AdminProducts() {
   const [status, setStatus] = useState<(typeof STATUS)[number]["key"]>("all");
   const [page, setPage] = useState(1);
   const [busyId, setBusyId] = useState<number | null>(null);
+  // Chọn nhiều dòng để thao tác hàng loạt (chỉ trong trang đang xem).
+  const [selected, setSelected] = useState<Set<number>>(() => new Set());
+  const [bulk, setBulk] = useState<{ done: number; total: number } | null>(null);
 
   const editParam = params.get("edit");
   const lowOnly = params.get("warn") === "1";
@@ -64,6 +69,24 @@ export default function AdminProducts() {
   const rows = list.data?.items ?? [];
   const filtered = !!keyword || cat !== undefined || status !== "all" || lowOnly;
 
+  // Đổi bộ lọc hoặc sang trang khác → bỏ chọn: thao tác hàng loạt chỉ áp dụng cho các dòng đang thấy.
+  useEffect(() => {
+    setSelected(new Set());
+  }, [keyword, cat, status, lowOnly, page]);
+
+  const picked = rows.filter((p) => selected.has(p.id));
+  const allPicked = rows.length > 0 && picked.length === rows.length;
+  const locked = bulk !== null;
+
+  const toggleOne = (id: number) =>
+    setSelected((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const toggleAll = () => setSelected(allPicked ? new Set() : new Set(rows.map((p) => p.id)));
+
   const filter = (fn: () => void) => {
     fn();
     setPage(1);
@@ -85,11 +108,63 @@ export default function AdminProducts() {
   const onDelete = async (p: ProductAdminListItem) => {
     const ok = await confirm({
       title: `Xóa “${p.name}”?`,
-      body: "Sản phẩm được xóa mềm: biến mất khỏi cửa hàng và trang quản trị, được gỡ khỏi giỏ hàng của khách; lịch sử đơn và thống kê giữ nguyên.",
+      body: DELETE_NOTE,
       okLabel: "Xóa sản phẩm",
       danger: true,
     });
     if (ok) await run(p, () => productApi.delete(p.id), "Đã xóa sản phẩm");
+  };
+
+  /**
+   * Thao tác hàng loạt: gọi lần lượt đúng API của thao tác từng dòng (SetActive / Delete) cho mỗi sản phẩm đã chọn.
+   * Sản phẩm nào lỗi thì bỏ qua và báo lại ở cuối, các sản phẩm còn lại vẫn được xử lý.
+   */
+  const runBulk = async (targets: ProductAdminListItem[], fn: (p: ProductAdminListItem) => Promise<unknown>, done: (n: number) => string, removes = false) => {
+    setBulk({ done: 0, total: targets.length });
+    let ok = 0;
+    const failed: string[] = [];
+    for (const p of targets) {
+      try {
+        await fn(p);
+        ok++;
+      } catch (e) {
+        failed.push(`${p.name}: ${toApiError(e).message}`);
+      }
+      setBulk({ done: ok + failed.length, total: targets.length });
+    }
+    setBulk(null);
+    setSelected(new Set());
+    // Xóa hết các dòng của trang cuối → lùi một trang để không đứng ở trang trống.
+    if (removes && ok === rows.length && page > 1) setPage(page - 1);
+    else await list.reload();
+    notify(
+      failed.length
+        ? `${ok ? `${done(ok)}. ` : ""}${failed.length} sản phẩm không thực hiện được:\n${failed.slice(0, 3).join("\n")}${failed.length > 3 ? "\n…" : ""}`
+        : done(ok)
+    );
+  };
+
+  const onBulkActive = async (isActive: boolean) => {
+    const targets = picked.filter((p) => p.isActive !== isActive);
+    if (!targets.length) return notify(isActive ? "Các sản phẩm đã chọn đều đang bán" : "Các sản phẩm đã chọn đều đang tạm ẩn");
+    const ok = await confirm({
+      title: isActive ? `Hiện ${targets.length} sản phẩm trên cửa hàng?` : `Tạm ẩn ${targets.length} sản phẩm?`,
+      body: isActive ? "Các sản phẩm này sẽ hiển thị lại trên cửa hàng." : "Các sản phẩm này sẽ không hiển thị trên cửa hàng cho đến khi được hiện lại.",
+      okLabel: isActive ? "Hiện sản phẩm" : "Tạm ẩn",
+    });
+    if (!ok) return;
+    await runBulk(targets, (p) => productApi.setActive(p.id, isActive), (n) => (isActive ? `${n} sản phẩm đã hiển thị lại` : `Đã tạm ẩn ${n} sản phẩm`));
+  };
+
+  const onBulkDelete = async () => {
+    const ok = await confirm({
+      title: `Xóa ${picked.length} sản phẩm đã chọn?`,
+      body: DELETE_NOTE,
+      okLabel: `Xóa ${picked.length} sản phẩm`,
+      danger: true,
+    });
+    if (!ok) return;
+    await runBulk(picked, (p) => productApi.delete(p.id), (n) => `Đã xóa ${n} sản phẩm`, true);
   };
 
   // Đang thêm / sửa: form chiếm cả trang; danh sách vẫn giữ nguyên bộ lọc và trang hiện tại để quay lại.
@@ -150,16 +225,46 @@ export default function AdminProducts() {
           </div>
 
           <div className={cn("overflow-x-auto", list.loading && list.data && "opacity-70")}>
-            <div className="min-w-[1000px]">
-              <div className={cn("hsv-thead grid gap-3", COLS)}>
-                <span>Sản phẩm ({list.data?.totalCount ?? "…"})</span>
-                <span>Trạng thái</span>
-                <span>Tồn kho</span>
-                <span>Danh mục</span>
-                <span>Nguyên liệu</span>
-                <span className="text-right">Giá</span>
-                <span className="text-right">Thao tác</span>
-              </div>
+            <div className="min-w-[1030px]">
+              {picked.length > 0 ? (
+                // Đã chọn dòng: đầu bảng đổi thành thanh thao tác hàng loạt.
+                <div className="hsv-thead flex min-h-8 items-center gap-3 py-1" role="toolbar" aria-label="Thao tác hàng loạt">
+                  <Checkbox checked={allPicked} indeterminate onChange={toggleAll} disabled={locked} label={allPicked ? "Bỏ chọn tất cả" : "Chọn tất cả sản phẩm trong trang"} />
+                  <span className="font-semibold text-ink">Đã chọn {picked.length}</span>
+                  {bulk ? (
+                    <span className="flex items-center gap-1.5 text-muted2">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Đang xử lý {bulk.done}/{bulk.total}…
+                    </span>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <button onClick={() => onBulkActive(true)} className="hsv-btn-secondary hsv-btn-sm">
+                        Đặt là Đang bán
+                      </button>
+                      <button onClick={() => onBulkActive(false)} className="hsv-btn-secondary hsv-btn-sm">
+                        Đặt là Tạm ẩn
+                      </button>
+                      <button onClick={onBulkDelete} className="hsv-btn-danger-outline hsv-btn-sm">
+                        Xóa sản phẩm
+                      </button>
+                      <button onClick={() => setSelected(new Set())} className="hsv-link-muted ml-1 text-xs">
+                        Bỏ chọn
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className={cn("hsv-thead grid min-h-8 items-center gap-3 py-1", COLS)}>
+                  <Checkbox checked={false} onChange={toggleAll} disabled={rows.length === 0} label="Chọn tất cả sản phẩm trong trang" />
+                  <span>Sản phẩm ({list.data?.totalCount ?? "…"})</span>
+                  <span>Trạng thái</span>
+                  <span>Tồn kho</span>
+                  <span>Danh mục</span>
+                  <span>Nguyên liệu</span>
+                  <span className="text-right">Giá</span>
+                  <span className="text-right">Thao tác</span>
+                </div>
+              )}
               {!list.data ? (
                 <LoadingRows rows={6} />
               ) : rows.length === 0 ? (
@@ -178,43 +283,48 @@ export default function AdminProducts() {
                   />
                 )
               ) : (
-                rows.map((p) => (
-                  <div key={p.id} className={cn("hsv-trow grid items-center gap-3", COLS, busyId === p.id && "opacity-50")}>
-                    <button onClick={() => setParam("edit", String(p.id))} className="flex min-w-0 items-center gap-3 rounded-lg text-left">
-                      <ProductImage src={p.mainImage} seed={p.id} className="h-8 w-8 shrink-0 rounded-lg border border-line" />
-                      <span className="min-w-0 truncate font-medium hover:underline">{p.name}</span>
-                    </button>
-                    <span>
-                      <Badge tone={p.isActive ? "ok" : "neutral"}>{p.isActive ? "Đang bán" : "Tạm ẩn"}</Badge>
-                    </span>
-                    <span className="min-w-0 truncate">
-                      <span className={cn(p.isLowStock && (p.totalStock === 0 ? "font-medium text-danger" : "font-medium text-warn"))}>
-                        {p.totalStock === 0 ? "Hết hàng" : `${p.totalStock} còn hàng`}
+                rows.map((p) => {
+                  const isPicked = selected.has(p.id);
+                  const rowBusy = busyId === p.id || locked;
+                  return (
+                    <div key={p.id} className={cn("hsv-trow grid items-center gap-3", COLS, isPicked && "bg-surface hover:bg-surface", busyId === p.id && "opacity-50")}>
+                      <Checkbox checked={isPicked} onChange={() => toggleOne(p.id)} disabled={locked} label={`Chọn ${p.name}`} />
+                      <button onClick={() => setParam("edit", String(p.id))} className="flex min-w-0 items-center gap-3 rounded-lg text-left">
+                        <ProductImage src={p.mainImage} seed={p.id} className="h-8 w-8 shrink-0 rounded-lg border border-line" />
+                        <span className="min-w-0 truncate font-medium hover:underline">{p.name}</span>
+                      </button>
+                      <span>
+                        <Badge tone={p.isActive ? "ok" : "neutral"}>{p.isActive ? "Đang bán" : "Tạm ẩn"}</Badge>
                       </span>
-                      <span className="text-muted2"> · {p.variantCount} biến thể</span>
-                    </span>
-                    <span className="truncate text-ink-2">{p.categoryName}</span>
-                    <span className="truncate text-ink-2">{p.materialName}</span>
-                    <span className="text-right font-medium">{formatVND(p.price)}</span>
-                    <div className="flex justify-end gap-3">
-                      <button onClick={() => setParam("edit", String(p.id))} className="hsv-link">
-                        Sửa
-                      </button>
-                      <button
-                        disabled={busyId === p.id}
-                        onClick={() =>
-                          run(p, () => productApi.setActive(p.id, !p.isActive), p.isActive ? "Đã tạm ẩn sản phẩm" : "Sản phẩm đã hiển thị lại")
-                        }
-                        className="hsv-link-muted"
-                      >
-                        {p.isActive ? "Ẩn" : "Hiện"}
-                      </button>
-                      <button disabled={busyId === p.id} onClick={() => onDelete(p)} className="hsv-link-danger">
-                        Xóa
-                      </button>
+                      <span className="min-w-0 truncate">
+                        <span className={cn(p.isLowStock && (p.totalStock === 0 ? "font-medium text-danger" : "font-medium text-warn"))}>
+                          {p.totalStock === 0 ? "Hết hàng" : `${p.totalStock} còn hàng`}
+                        </span>
+                        <span className="text-muted2"> · {p.variantCount} biến thể</span>
+                      </span>
+                      <span className="truncate text-ink-2">{p.categoryName}</span>
+                      <span className="truncate text-ink-2">{p.materialName}</span>
+                      <span className="text-right font-medium">{formatVND(p.price)}</span>
+                      <div className="flex justify-end gap-3">
+                        <button onClick={() => setParam("edit", String(p.id))} className="hsv-link">
+                          Sửa
+                        </button>
+                        <button
+                          disabled={rowBusy}
+                          onClick={() =>
+                            run(p, () => productApi.setActive(p.id, !p.isActive), p.isActive ? "Đã tạm ẩn sản phẩm" : "Sản phẩm đã hiển thị lại")
+                          }
+                          className="hsv-link-muted"
+                        >
+                          {p.isActive ? "Ẩn" : "Hiện"}
+                        </button>
+                        <button disabled={rowBusy} onClick={() => onDelete(p)} className="hsv-link-danger">
+                          Xóa
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
