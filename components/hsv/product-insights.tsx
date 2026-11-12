@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
 import { CalendarDays, RefreshCw } from "lucide-react";
 import { Skeleton } from "@/components/hsv/ui";
 import { useApi } from "@/hooks/use-api";
@@ -24,6 +24,22 @@ async function loadAllVariantCosts() {
     all.push(...r.items);
     if (!r.items.length || all.length >= r.totalCount) return all;
   }
+}
+
+/** Kết quả gần nhất dùng lại trong ít phút: quay lại danh sách từ trang sửa sản phẩm không phải đọc lại toàn bộ giá vốn. */
+const CACHE_MS = 2 * 60 * 1000;
+let cached: { at: number; promise: ReturnType<typeof loadInsights> } | null = null;
+
+function loadInsightsCached(force = false) {
+  if (force || !cached || Date.now() - cached.at > CACHE_MS) {
+    const promise = loadInsights();
+    cached = { at: Date.now(), promise };
+    // Lỗi thì không giữ lại, lần sau tải lại từ đầu.
+    promise.catch(() => {
+      if (cached?.promise === promise) cached = null;
+    });
+  }
+  return cached.promise;
 }
 
 /**
@@ -96,9 +112,19 @@ const short = (v: number) => (v > 0 ? formatShortVND(v) : "0");
 
 /** Dải chỉ số phía trên danh sách Sản phẩm. Chỉ dùng cho Quản trị viên (API thống kê và giá vốn là API riêng của Quản trị viên). */
 export function ProductInsights() {
-  const { data, error, loading, reload } = useApi(loadInsights, []);
-  // Đơn hoàn thành / tồn kho thay đổi → tính lại (gom các sự kiện đến dồn dập).
-  useRealtimeRefresh(["OrderStatusChanged", "StockChanged"], reload, 1500);
+  // Lần mở trang dùng lại kết quả còn mới; sự kiện thời gian thực hoặc nút "tải lại" thì bắt buộc tính lại.
+  const force = useRef(false);
+  const { data, error, loading, reload } = useApi(() => {
+    const f = force.current;
+    force.current = false;
+    return loadInsightsCached(f);
+  }, []);
+  const refresh = () => {
+    force.current = true;
+    return reload();
+  };
+  // Đơn hoàn thành / tồn kho / sản phẩm (sửa tồn kho trong form) thay đổi → tính lại; gom các sự kiện đến dồn dập trong 5 giây thành một lần tải.
+  useRealtimeRefresh(["OrderStatusChanged", "StockChanged", "ProductChanged"], refresh, 5000);
 
   const completedNote = "Lượng bán chỉ tính trên đơn đã hoàn thành trong 30 ngày gần nhất.";
   const truncatedNote = data?.truncated ? " Kỳ này có từ 50 sản phẩm bán được trở lên nên lượng bán có thể thiếu các sản phẩm bán ít nhất." : "";
@@ -112,7 +138,7 @@ export function ProductInsights() {
       {error && !data ? (
         <p className="flex h-12 items-center gap-2 px-4 text-[13px] text-muted2">
           Không tải được chỉ số: {error.message}
-          <button onClick={() => void reload()} className="hsv-btn-icon" aria-label="Tải lại chỉ số">
+          <button onClick={() => void refresh()} className="hsv-btn-icon" aria-label="Tải lại chỉ số">
             <RefreshCw className="h-3.5 w-3.5" />
           </button>
         </p>
