@@ -56,9 +56,9 @@ function AdminLoginForm() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-chrome px-4 py-12">
+    <div className="flex min-h-screen items-center justify-center bg-surface-2 px-4 py-12">
       <div className="w-full max-w-[400px] animate-hin">
-        <form onSubmit={submit} noValidate className="rounded-2xl bg-white p-8 shadow-[0_24px_64px_rgba(0,0,0,.4)]">
+        <form onSubmit={submit} noValidate className="rounded-2xl border border-line bg-white p-8 shadow-[0_12px_40px_rgba(0,0,0,.06)]">
           <div className="mb-6 flex items-center gap-2.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/logo-mark.svg" alt="" width={32} height={32} className="h-8 w-8 shrink-0 rounded-lg" />
@@ -118,7 +118,7 @@ function AdminLoginForm() {
 
         {STORE_URL && (
           <p className="mt-5 text-center text-[13px]">
-            <a href={STORE_URL} className="rounded text-chrome-muted hover:text-white">
+            <a href={STORE_URL} className="rounded text-muted2 hover:text-ink hover:underline">
               ← Về cửa hàng
             </a>
           </p>
