@@ -63,7 +63,7 @@ nên **không** đặt bí mật vào đây.
 | `/` | Tổng quan: việc cần làm (đơn chờ xử lý, đang giao, chờ khách nhận, khách cần hỗ trợ, biến thể sắp hết); chọn kỳ 7 / 30 / 90 ngày / tháng này, so với kỳ trước: ô chỉ số có xu hướng, đơn hàng theo ngày và theo trạng thái, cơ cấu giao hàng / thanh toán; Quản trị viên xem thêm doanh thu theo thời gian, phân tích doanh thu (giá vốn, lợi nhuận) và sản phẩm bán chạy | Nhân viên, Quản trị viên |
 | `/categories` | Danh mục | Nhân viên, Quản trị viên |
 | `/materials` | Nguyên liệu & nguồn gốc | Nhân viên, Quản trị viên |
-| `/products` | Sản phẩm: biến thể, tải ảnh lên, ẩn / hiện; chọn nhiều dòng (hoặc tất cả sản phẩm khớp bộ lọc) để ẩn / hiện / xóa hoặc chỉnh sửa hàng loạt trong bảng kiểu Excel (tên, trạng thái, danh mục, nguyên liệu, giá, tồn kho; kéo bôi đen nhiều ô rồi sửa một ô); dải chỉ số tồn kho 30 ngày (chỉ Quản trị viên) | Nhân viên, Quản trị viên |
+| `/products` | Sản phẩm: biến thể, tải ảnh lên, ẩn / hiện; tab Tất cả / Đang bán / Tạm ẩn / Sắp hết hàng (mỗi lúc một tab); chọn nhiều dòng (hoặc tất cả sản phẩm khớp bộ lọc) để ẩn / hiện / xóa hoặc chỉnh sửa hàng loạt trong bảng kiểu Excel (tên, trạng thái, danh mục, nguyên liệu, giá, tồn kho; kéo bôi đen nhiều ô rồi sửa một ô); dải chỉ số tồn kho tính trên 30 ngày gần nhất (chỉ Quản trị viên) | Nhân viên, Quản trị viên |
 | `/collections` | Bộ sưu tập: nhóm sản phẩm hiện ở mục "Bộ sưu tập" của cửa hàng | Nhân viên, Quản trị viên |
 | `/orders` | Đơn hàng: đổi trạng thái; tạo / hủy vận đơn GHN, in nhãn, theo dõi tiến trình (môi trường thử GHN có nút giả lập trạng thái) | Nhân viên, Quản trị viên |
 | `/support` | Hỗ trợ khách hàng: tiếp nhận và trả lời hội thoại khi khách bấm "Chat với nhân viên" ở cửa hàng | Nhân viên, Quản trị viên |
